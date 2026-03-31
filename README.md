@@ -1,5 +1,11 @@
 [![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/Ho0VU-Re)
-# [GIVE YOUR PROJECT A NAME!]
+# JSON Derulo Comeback Tour
+
+**Project tracking:** see [PROJECT_BOARD.md](PROJECT_BOARD.md) for tasks, deliverables, and design questions.
+
+**Per-person AI assistant setup:** see [docs/README.md](docs/README.md) (role briefs in `docs/ai/`, personal files under `docs/contributors/<name>/`).
+
+**New to the repo?**
 
 > **TODO**: Replace this description with a short summary of what this data pipeline does and what problem it solves.
 
