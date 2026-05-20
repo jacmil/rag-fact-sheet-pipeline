@@ -1,0 +1,303 @@
+import pandas as pd
+import os
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+
+def require_env(name: str) -> str:
+    """Return a required environment variable value or raise a clear setup error."""
+    value = os.getenv(name, "").strip()
+    if not value:
+        raise ValueError(
+            f"{name} is not set. Copy .env.example to .env and set {name}."
+        )
+    return value
+
+
+def bootstrap_runtime_env(dotenv_path: str = ".env") -> None:
+    """Load `.env` and apply runtime environment defaults safely.
+
+    Uses `utf-8-sig` to support `.env` files saved with UTF-8 BOM, which would
+    otherwise make the first key unreadable (for example `PDF_SOURCE_DIR`).
+    """
+    load_dotenv(dotenv_path=dotenv_path, encoding="utf-8-sig")
+
+    if os.getenv("HF_HOME", "").strip():
+        os.environ["HF_HOME"] = os.getenv("HF_HOME", "").strip()
+
+    if os.name == "nt":
+        os.environ["KMP_DUPLICATE_LIB_OK"] = os.getenv("KMP_DUPLICATE_LIB_OK", "TRUE")
+
+
+def resolve_pipeline_config() -> dict:
+    """Resolve runtime configuration for the multi-company PDF pipeline."""
+    bootstrap_runtime_env()
+
+    company_dirs = {
+        "Hershey Company": Path(require_env("HERSHEY_PDF_DIR")),
+        "Nomad Foods": Path(require_env("NOMAD_PDF_DIR")),
+        # Add more companies here later if needed
+    }
+
+    pdf_glob = os.getenv("PDF_GLOB", "*.pdf").strip() or "*.pdf"
+
+    for company, company_dir in company_dirs.items():
+        if not company_dir.is_dir():
+            raise ValueError(f"{company} directory is not valid: {company_dir}")
+
+        pdf_paths = sorted(company_dir.glob(pdf_glob))
+        if not pdf_paths:
+            raise ValueError(
+                f"No PDFs found for {company} in {company_dir} with pattern: {pdf_glob}"
+            )
+
+    output_dir = Path(os.getenv("OUTPUT_DIR", "data/interim"))
+
+    return {
+        "company_dirs": company_dirs,
+        "pdf_glob": pdf_glob,
+        "output_dir": output_dir,
+        "chroma_dir": Path(os.getenv("CHROMA_DIR", "data/chromadb")),
+        "embedding_model": os.getenv(
+            "EMBEDDING_MODEL", "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
+        ),
+        "reranking_model": os.getenv(
+            "RERANKING_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2"
+        ),
+        "generation_model": os.getenv("GENERATION_MODEL", "Qwen/Qwen2.5-1.5B-Instruct"),
+        # Vector store abstraction config (Project D)
+        "vector_store_backend": os.getenv(
+            "VECTOR_STORE", "chroma"
+        ),  # "chroma" or "pgvector"
+        "collection_name": os.getenv("COLLECTION_NAME", "tpi_vectors"),
+        "pg_connection_string": os.getenv(
+            "PG_CONNECTION_STRING", ""
+        ),  # required when backend=pgvector
+    }
+
+
+#####################################
+# Chunking
+#####################################
+def get_raw_texts(elements: list) -> list[str]:
+    """Extract clean text strings from unstructured elements."""
+    return [
+        el.text.strip()
+        for el in elements
+        if getattr(el, "text", None) and el.text.strip()
+    ]
+
+
+def build_sections_from_elements(elements: list) -> list[dict]:
+    """Group elements into header-delimited sections with running title context."""
+    sections: list[dict] = []
+    running_title = ""
+    section_title = ""
+    section_header = ""
+    section_body: list[str] = []
+    section_pages: set = set()
+    section_types: set = set()
+
+    for el in elements:
+        text = (getattr(el, "text", None) or "").strip()
+        if not text:
+            continue
+
+        el_type = type(el).__name__
+        page = getattr(el.metadata, "page_number", None)
+
+        if el_type == "Title":
+            running_title = text
+            continue
+
+        if el_type == "Header":
+            if section_header and section_body:
+                sections.append(
+                    {
+                        "running_title": section_title,
+                        "header": section_header,
+                        "body": section_body,
+                        "pages": section_pages,
+                        "element_types": section_types,
+                    }
+                )
+            section_title = running_title
+            section_header = text
+            section_body = []
+            section_pages = {page} if page else set()
+            section_types = {"Header"}
+            if section_title:
+                section_types.add("Title")
+            continue
+
+        if not section_header:
+            section_title = running_title
+            section_header = "(no header)"
+            section_body = []
+            section_pages = set()
+            section_types = set()
+            if section_title:
+                section_types.add("Title")
+
+        section_body.append(text)
+        section_types.add(el_type)
+        if page:
+            section_pages.add(page)
+
+    if section_header and section_body:
+        sections.append(
+            {
+                "running_title": section_title,
+                "header": section_header,
+                "body": section_body,
+                "pages": section_pages,
+                "element_types": section_types,
+            }
+        )
+
+    return sections
+
+
+def emit_chunks_from_sections(
+    sections: list[dict],
+    char_limit: int = 1000,
+    source_label: str = "",
+) -> list[dict]:
+    """Split header-delimited sections into char-limited chunks."""
+    chunks: list[dict] = []
+
+    for section in sections:
+        body_texts = section["body"]
+        if not body_texts:
+            continue
+
+        prefix_parts = []
+        if section["running_title"]:
+            prefix_parts.append(f"RUNNING TITLE: {section['running_title']}")
+        prefix_parts.append(f"HEADER (H2): {section['header']}")
+        prefix = "\n\n".join(prefix_parts)
+
+        available = char_limit - len(prefix) - 2
+        if available < 100:
+            available = max(char_limit // 2, 100)
+
+        body_buffer: list[str] = []
+        body_buffer_len = 0
+
+        for body_piece in body_texts:
+            if body_buffer_len + len(body_piece) > available and body_buffer:
+                chunks.append(
+                    {
+                        "id": f"elem_{len(chunks):04d}",
+                        "text": f"{prefix}\n\n" + "\n".join(body_buffer),
+                        "strategy": "element_type",
+                        "source": source_label,
+                        "pages": sorted(section["pages"]),
+                        "element_types": sorted(section["element_types"]),
+                    }
+                )
+                body_buffer = []
+                body_buffer_len = 0
+
+            body_buffer.append(body_piece)
+            body_buffer_len += len(body_piece)
+
+        if body_buffer:
+            chunks.append(
+                {
+                    "id": f"elem_{len(chunks):04d}",
+                    "text": f"{prefix}\n\n" + "\n".join(body_buffer),
+                    "strategy": "element_type",
+                    "source": source_label,
+                    "pages": sorted(section["pages"]),
+                    "element_types": sorted(section["element_types"]),
+                }
+            )
+
+    return chunks
+
+
+def chunk_by_char_limit(
+    elements: list,
+    char_limit: int = 1000,
+    source_label: str = "",
+) -> list[dict]:
+    """Strategy A: chunk by cumulative character limit."""
+    raw_texts = get_raw_texts(elements)
+    chunks: list[dict] = []
+    buffer: list[str] = []
+    buffer_len = 0
+
+    for text in raw_texts:
+        if buffer_len + len(text) > char_limit and buffer:
+            chunks.append(
+                {
+                    "id": f"char_{len(chunks):04d}",
+                    "text": " ".join(buffer),
+                    "strategy": "char_limit",
+                    "source": source_label,
+                }
+            )
+            buffer = []
+            buffer_len = 0
+        buffer.append(text)
+        buffer_len += len(text)
+
+    if buffer:
+        chunks.append(
+            {
+                "id": f"char_{len(chunks):04d}",
+                "text": " ".join(buffer),
+                "strategy": "char_limit",
+                "source": source_label,
+            }
+        )
+
+    return chunks
+
+
+def chunk_by_element_type(
+    elements: list,
+    char_limit: int = 1000,
+    source_label: str = "",
+) -> list[dict]:
+    """Strategy B: chunk by heading-delimited sections."""
+    sections = build_sections_from_elements(elements)
+    return emit_chunks_from_sections(sections, char_limit, source_label)
+
+
+#####################################
+# Evalutation for Retrieval Metrics
+#####################################
+def evaluate_retrieval(
+    ground_truth: list[dict],
+    collection,
+    query_embeddings_fn,
+    k: int = 5,
+) -> pd.DataFrame:
+    """Run queries against a ChromaDB collection and compute retrieval metrics."""
+    rows = []
+    for entry in ground_truth:
+        query = entry["query"]
+        relevant = set(entry["relevant_ids"])
+        q_vec = query_embeddings_fn(query)
+        results = collection.query(query_embeddings=[q_vec], n_results=k)
+        retrieved_ids = results["ids"][0]
+        hits_in_k = len(relevant & set(retrieved_ids))
+        recall = hits_in_k / len(relevant) if relevant else 0.0
+        precision = hits_in_k / k
+        mrr = 0.0
+        for rank, rid in enumerate(retrieved_ids, 1):
+            if rid in relevant:
+                mrr = 1.0 / rank
+                break
+        rows.append(
+            {
+                "query": query[:60] + "..." if len(query) > 60 else query,
+                f"recall@{k}": recall,
+                f"precision@{k}": precision,
+                "mrr": mrr,
+            }
+        )
+    return pd.DataFrame(rows)
