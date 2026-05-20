@@ -24,7 +24,7 @@ ChromaDB returns distances (lower = more similar). The interface returns similar
 
 ### Upsert over client-side idempotency
 
-The original PS2 pipeline checked existing IDs before adding. We removed that check. Both ChromaDB (`add` with existing IDs) and pgvector (`ON CONFLICT`) handle duplicates natively. Simpler code, same behaviour.
+The original PS2 pipeline checked existing IDs before adding. We removed that check. ChromaDB's `collection.upsert()` and pgvector's `ON CONFLICT` handle duplicates natively. `chroma.py` uses `upsert()` not `add()` specifically because `add()` throws `DuplicateIDError` on re-runs, which breaks pipeline idempotency.
 
 ### `_get_store()` per-command, not at group level
 
@@ -58,6 +58,32 @@ Sylvan told us TPI does batch uploads of 2-3k documents about 5-6 times a year. 
 
 TPI filters by metadata (doctype, sector, company) to narrow from potentially 50k chunks to a manageable set. The two backends may handle metadata filtering very differently (ChromaDB's HNSW with post-filter vs pgvector's SQL WHERE with pre-filter via joins). Measuring both gives a more complete picture.
 
+## Repository and code structure
+
+### Flat file layout over pipeline package
+
+Considered moving pipeline files into a `pipeline/` subdirectory. Kept them at root because there are only six files, the brief rewards code that is "smaller than you would expect for what it achieves", and a subdirectory would add import refactoring for no functional gain.
+
+### Logging config at CLI level, not module level
+
+`coloredlogs.install()` runs inside `cli()`, not at the top of `pipeline.py`. Module-level setup would fire on import, silently reconfiguring logging for anyone importing the module for testing or from another script.
+
+### Cross-encoder loaded once per retrieve call
+
+`rerank_chunks()` accepts a pre-loaded `CrossEncoder` instance rather than creating one internally from config. The benchmarker calling `run_retrieve()` 20 times for latency measurement loads the model once, not 20 times.
+
+### Inlined thin wrapper functions
+
+Removed `store_batch()` from `embed.py` and `get_embedding_model()` from `retrieve.py`. Both were single-line wrappers that added indirection without adding logic. The call sites are clearer without them.
+
+### Shared default query constant
+
+The fallback query string `"What are the emissions targets for this company?"` was duplicated in `retrieve.py` and `generate.py`. Moved to `DEFAULT_QUERY` in `utils.py` and imported in both files.
+
+### Data ingestion responsibility
+
+Pipeline infrastructure owner builds the machinery and documents how to add new companies. The benchmarker decides which documents to feed and handles data selection for measurement. Config is parameterised via `.env` so adding documents is a config change, not an infra change.
+
 ## Known limitations
 
 ### `get_or_create_collection` ambiguity
@@ -68,6 +94,6 @@ ChromaDB's `get_or_create_collection` can't distinguish "created a new collectio
 
 `get_company_filter()` in `retrieve.py` maps query keywords to company names. Currently hardcoded to Hershey and Nomad. Needs parameterising from config or collection metadata before the benchmarker adds more companies.
 
-### Evaluation function bypasses abstraction
+### Evaluation function refactored to use VectorStore
 
-`evaluate_retrieval()` in `utils.py` calls `collection.query()` directly on a ChromaDB collection object. This needs refactoring to go through `VectorStore.query()` so the same evaluation runs against both backends.
+`evaluate_retrieval()` in `utils.py` originally called `collection.query()` directly on a raw ChromaDB collection object, bypassing the abstraction. Refactored to accept a `VectorStore` and `SentenceTransformer` instead. The benchmarker will likely extend or replace this function for their harness, but the current version runs against either backend.
