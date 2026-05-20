@@ -19,10 +19,7 @@ class ChromaStore:
         self.client = chromadb.PersistentClient(path=chroma_dir)
         self._collection_name = collection_name
 
-        # FLAG 1: get_or_create makes it impossible to distinguish "created new"
-        # from "loaded existing" without checking count before and after.
-        # For now we just log count; if you later need strict create-vs-load
-        # semantics, consider splitting into two factory paths.
+        # See DECISIONS.md: get_or_create ambiguity
         self.collection = self.client.get_or_create_collection(
             name=collection_name,
             metadata={"hnsw:space": "cosine"},
@@ -41,7 +38,7 @@ class ChromaStore:
         metadatas: list[dict[str, str]],
     ) -> None:
         """Store chunks with their embeddings and metadata."""
-        self.collection.add(
+        self.collection.upsert(
             ids=ids,
             embeddings=embeddings.tolist(),
             documents=texts,
