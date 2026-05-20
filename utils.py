@@ -1,9 +1,9 @@
-import pandas as pd
 import os
 from pathlib import Path
-
 from dotenv import load_dotenv
+from vector_store.types import VectorStore
 
+DEFAULT_QUERY: str = "What are the emissions targets for this company?"
 
 def require_env(name: str) -> str:
     """Return a required environment variable value or raise a clear setup error."""
@@ -16,15 +16,12 @@ def require_env(name: str) -> str:
 
 
 def bootstrap_runtime_env(dotenv_path: str = ".env") -> None:
-    """Load `.env` and apply runtime environment defaults safely.
-
-    Uses `utf-8-sig` to support `.env` files saved with UTF-8 BOM, which would
-    otherwise make the first key unreadable (for example `PDF_SOURCE_DIR`).
-    """
+    """Load `.env` and apply runtime environment defaults safely."""
     load_dotenv(dotenv_path=dotenv_path, encoding="utf-8-sig")
 
-    if os.getenv("HF_HOME", "").strip():
-        os.environ["HF_HOME"] = os.getenv("HF_HOME", "").strip()
+    hf_home = os.getenv("HF_HOME", "").strip()
+    if hf_home:
+        os.environ["HF_HOME"] = hf_home
 
     if os.name == "nt":
         os.environ["KMP_DUPLICATE_LIB_OK"] = os.getenv("KMP_DUPLICATE_LIB_OK", "TRUE")
@@ -272,32 +269,44 @@ def chunk_by_element_type(
 #####################################
 def evaluate_retrieval(
     ground_truth: list[dict],
-    collection,
-    query_embeddings_fn,
+    store: "VectorStore",
+    model: "SentenceTransformer",
     k: int = 5,
-) -> pd.DataFrame:
-    """Run queries against a ChromaDB collection and compute retrieval metrics."""
-    rows = []
+) -> "pd.DataFrame":
+    """Run queries against a VectorStore and compute retrieval metrics.
+
+    TODO (benchmarker): extend with per-query latency timing, per-company
+    breakdowns, and any additional metrics needed for the benchmark report.
+    Consider whether DataFrame is the right output format for your harness.
+    """
+    import pandas as pd
+    import numpy as np
+
+    rows: list[dict] = []
     for entry in ground_truth:
-        query = entry["query"]
-        relevant = set(entry["relevant_ids"])
-        q_vec = query_embeddings_fn(query)
-        results = collection.query(query_embeddings=[q_vec], n_results=k)
-        retrieved_ids = results["ids"][0]
-        hits_in_k = len(relevant & set(retrieved_ids))
-        recall = hits_in_k / len(relevant) if relevant else 0.0
-        precision = hits_in_k / k
-        mrr = 0.0
+        query: str = entry["query"]
+        relevant: set[str] = set(entry["relevant_ids"])
+
+        q_vec: np.ndarray = model.encode([query], normalize_embeddings=True)[0]
+        results = store.query(embedding=q_vec, k=k)
+        retrieved_ids: list[str] = [r.chunk_id for r in results]
+
+        hits_in_k: int = len(relevant & set(retrieved_ids))
+        recall: float = hits_in_k / len(relevant) if relevant else 0.0
+        precision: float = hits_in_k / k
+
+        mrr: float = 0.0
         for rank, rid in enumerate(retrieved_ids, 1):
             if rid in relevant:
                 mrr = 1.0 / rank
                 break
-        rows.append(
-            {
-                "query": query[:60] + "..." if len(query) > 60 else query,
-                f"recall@{k}": recall,
-                f"precision@{k}": precision,
-                "mrr": mrr,
-            }
-        )
+
+        rows.append({
+            "query": query[:60] + "..." if len(query) > 60 else query,
+            f"recall@{k}": recall,
+            f"precision@{k}": precision,
+            "mrr": mrr,
+        })
+
     return pd.DataFrame(rows)
+

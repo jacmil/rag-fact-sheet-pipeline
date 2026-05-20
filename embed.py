@@ -96,25 +96,6 @@ def build_chunk_records(
     return ids, documents, metadatas
 
 
-def store_batch(
-    batch_ids: list[str],
-    batch_docs: list[str],
-    batch_meta: list[dict[str, str]],
-    batch_embeddings: np.ndarray,  # shape: (batch_size, embed_dim)
-    store: VectorStore,
-) -> None:
-    """Store one batch of chunks via the vector store backend.
-
-    Numpy-to-list conversion happens inside the backend, not here.
-    """
-    store.add(
-        ids=batch_ids,
-        embeddings=batch_embeddings,
-        texts=batch_docs,
-        metadatas=batch_meta,
-    )
-
-
 def add_chunks_to_store(
     chunks: list[dict],
     store: VectorStore,
@@ -142,12 +123,11 @@ def add_chunks_to_store(
             batch_docs, normalize_embeddings=True
         )
 
-        store_batch(
-            ids[i : i + BATCH_SIZE],
-            batch_docs,
-            metadatas[i : i + BATCH_SIZE],
-            batch_embeddings,
-            store,
+        store.add(
+            ids=ids[i : i + BATCH_SIZE],
+            embeddings=batch_embeddings,
+            texts=batch_docs,
+            metadatas=metadatas[i : i + BATCH_SIZE],
         )
         logger.info(f"Batch [{batch_num}/{total_batches}] stored")
 

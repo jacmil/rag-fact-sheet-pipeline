@@ -7,7 +7,7 @@ import coloredlogs
 
 from transformers import pipeline as hf_pipeline, Pipeline
 
-from utils import resolve_pipeline_config
+from utils import resolve_pipeline_config, DEFAULT_QUERY
 
 
 logger = logging.getLogger(__name__)
@@ -134,10 +134,7 @@ def run_generate(
     The retrieve -> generate handoff is managed by pipeline.py, not here.
     """
     config: dict = resolve_pipeline_config()
-    final_query: str = query_text or os.getenv(
-        "QUERY_TEXT",
-        "What are the emissions targets for this company?",
-    )
+    final_query: str = query_text or os.getenv("QUERY_TEXT", DEFAULT_QUERY)
 
     if not chunk_texts:
         logger.warning("No chunks provided, nothing to generate from")
@@ -148,7 +145,6 @@ def run_generate(
     generator: Pipeline = load_generation_model(config)
     answer: str = generate_answer(generator, messages)
     logger.info("Generation complete")
-    print(answer)
     return answer
 
 

@@ -11,13 +11,6 @@ from vector_store import get_vector_store, VectorStore, QueryResult
 from utils import resolve_pipeline_config
 
 
-coloredlogs.install(
-    level="INFO",
-    fmt="%(asctime)s %(levelname)-8s %(message)s",
-    datefmt="%H:%M:%S",
-)
-
-
 def _get_store() -> VectorStore:
     """Create the vector store instance from environment config.
 
@@ -31,7 +24,11 @@ def _get_store() -> VectorStore:
 @click.group()
 def cli() -> None:
     """TPI Carbon Performance RAG pipeline."""
-    pass
+    coloredlogs.install(
+        level="INFO",
+        fmt="%(asctime)s %(levelname)-8s %(message)s",
+        datefmt="%H:%M:%S",
+    )
 
 
 @cli.command()

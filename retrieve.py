@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import logging
 import os
+
+from networkx import config
 import coloredlogs
 
 import numpy as np
 from sentence_transformers import SentenceTransformer, CrossEncoder
 
 from vector_store import VectorStore, QueryResult
-from utils import resolve_pipeline_config
+from utils import resolve_pipeline_config, DEFAULT_QUERY
 
 
 logger = logging.getLogger(__name__)
@@ -18,11 +20,6 @@ logger = logging.getLogger(__name__)
 # width of the first pass and the depth of the final output.
 BROAD_K: int = 50
 RERANK_TOP_K: int = 5
-
-
-def get_embedding_model(config: dict) -> SentenceTransformer:
-    """Load the retrieval embedding model."""
-    return SentenceTransformer(config["embedding_model"])
 
 
 def get_company_filter(query_text: str) -> dict[str, str] | None:
@@ -73,7 +70,7 @@ def retrieve_chunks(
 def rerank_chunks(
     query_text: str,
     results: list[QueryResult],
-    config: dict,
+    reranker: CrossEncoder,
     top_k: int = RERANK_TOP_K,
 ) -> list[QueryResult]:
     """Rerank retrieved chunks using a cross-encoder model.
@@ -83,7 +80,6 @@ def rerank_chunks(
     bi-encoder retrieval. Scores replace the original cosine
     similarity scores from the first stage.
     """
-    reranker: CrossEncoder = CrossEncoder(config["reranking_model"])
 
     # Cross-encoder expects list of (query, document) pairs
     pairs: list[tuple[str, str]] = [(query_text, r.text) for r in results]
@@ -114,10 +110,7 @@ def run_retrieve(
 ) -> list[QueryResult]:
     """Two-stage retrieval: broad bi-encoder pass, then cross-encoder rerank."""
     config: dict = resolve_pipeline_config()
-    query_text: str = query or os.getenv(
-        "QUERY_TEXT",
-        "What are the emissions targets for this company?",
-    )
+    query_text: str = query or os.getenv("QUERY_TEXT", DEFAULT_QUERY)
 
     # Allow standalone use without a pre-created store
     if store is None:
@@ -126,12 +119,13 @@ def run_retrieve(
         store = get_vector_store(config["collection_name"])
 
     logger.info(f"Query: {query_text}")
-    model: SentenceTransformer = get_embedding_model(config)
+    model: SentenceTransformer = SentenceTransformer(config["embedding_model"])
+    reranker: CrossEncoder = CrossEncoder(config["reranking_model"])
 
     # Stage 1: broad retrieval with bi-encoder
     results: list[QueryResult] = retrieve_chunks(query_text, store, model, k=BROAD_K)
     # Stage 2: rerank candidates with cross-encoder
-    results = rerank_chunks(query_text, results, config, top_k=RERANK_TOP_K)
+    results = rerank_chunks(query_text, results, reranker, top_k=RERANK_TOP_K)
 
     for i, r in enumerate(results, start=1):
         logger.info(f"[{i}] {r.text[:200]}...")

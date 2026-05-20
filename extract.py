@@ -48,7 +48,7 @@ def extract_all_pdfs(all_pdfs: list[tuple[str, Path]], raw_dir: Path) -> None:
         output_path = raw_dir / f"{safe_company}_{pdf_path.stem}_elements.pkl"
 
         if output_path.exists():
-            logger.warning(f"[{i}/{total}] Skipping {pdf_path.name} — already extracted")
+            logger.info(f"[{i}/{total}] Skipping {pdf_path.name} — already extracted")
             continue
 
         logger.info(f"[{i}/{total}] Extracting {pdf_path.name} ({company})")
@@ -63,17 +63,16 @@ def extract_all_pdfs(all_pdfs: list[tuple[str, Path]], raw_dir: Path) -> None:
 
 def chunk_all_pdfs(all_pdfs: list[tuple[str, Path]], raw_dir: Path, output_dir: Path) -> None:
     """Load .pkl files, apply chunking, save chunks as .jsonl."""
+    chunks_dir = output_dir / "chunks"
+    chunks_dir.mkdir(parents=True, exist_ok=True)
     total = len(all_pdfs)
     for i, (company, pdf_path) in enumerate(tqdm(all_pdfs, desc="Chunking PDFs"), start=1):
         safe_company = company.replace(" ", "_")
         pkl_path = raw_dir / f"{safe_company}_{pdf_path.stem}_elements.pkl"
-
-        chunks_dir = output_dir / "chunks"
-        chunks_dir.mkdir(parents=True, exist_ok=True)
         jsonl_path = chunks_dir / f"{safe_company}_{pdf_path.stem}_chunks.jsonl"
 
         if jsonl_path.exists():
-            logger.warning(f"[{i}/{total}] Skipping {pdf_path.name} — already chunked")
+            logger.info(f"[{i}/{total}] Skipping {pdf_path.name} — already chunked")
             continue
 
         if not pkl_path.exists():
@@ -112,7 +111,7 @@ def log_extraction_summary(company_dirs: dict[str, Path], pdf_glob: str) -> None
     """Log the number of PDFs found per company and the cumulative total."""
     total = 0
     for company, company_dir in company_dirs.items():
-        count = len(sorted(company_dir.glob(pdf_glob)))
+        count = len(list(company_dir.glob(pdf_glob)))
         logger.info(f"{company}: {count} PDF(s)")
         total += count
     logger.info(f"Total PDFs to extract: {total}")
