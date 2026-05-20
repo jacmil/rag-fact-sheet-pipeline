@@ -1,0 +1,41 @@
+name: project-d
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.12
+
+  # System-level PDF extraction dependencies
+  - poppler
+  - tesseract
+  - pandoc
+
+  # Core pipeline
+  - numpy
+  - pandas
+
+  # Torch (CPU/MPS for macOS, no CUDA)
+  - pytorch::pytorch
+
+  - pip:
+    # Pipeline CLI and utilities
+    - click
+    - tqdm
+    - coloredlogs
+    - python-dotenv
+
+    # PDF extraction
+    - "unstructured[pdf]"
+
+    # Embeddings and retrieval
+    - sentence-transformers
+
+    # Generation
+    - transformers
+
+    # Vector store: ChromaDB backend
+    - chromadb
+
+    # Vector store: pgvector backend (uncomment when needed)
+    # - sqlalchemy>=2.0
+    # - pgvector

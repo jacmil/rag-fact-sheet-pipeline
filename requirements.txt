@@ -1,0 +1,27 @@
+# Core pipeline
+click
+tqdm
+coloredlogs
+python-dotenv
+numpy
+pandas
+
+# PDF extraction
+unstructured[pdf]
+
+# Embeddings and retrieval
+sentence-transformers
+torch
+
+# Generation
+transformers
+
+# Vector store: ChromaDB backend
+chromadb
+
+# Vector store: pgvector backend (uncomment when using)
+# sqlalchemy>=2.0
+# pgvector
+
+# Quantisation (Linux/Nuvolos only, not supported on macOS Apple Silicon)
+# bitsandbytes
