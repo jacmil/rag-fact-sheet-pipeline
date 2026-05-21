@@ -31,7 +31,6 @@ vector_store/
 
 ## Known bugs and areas for improvement
 
-- `resolve_pipeline_config()` returns a plain `dict` with string keys. A `@dataclass` would give type safety and autocomplete across all files that use it.
 - `bitsandbytes` does not work on macOS Apple Silicon. Generation runs without quantisation on Mac.
 
 ## Setting up the development environment

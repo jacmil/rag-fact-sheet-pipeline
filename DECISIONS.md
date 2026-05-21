@@ -110,6 +110,10 @@ If a company subdirectory exists but contains no PDFs matching the glob, the pip
 
 A teammate proposed using the Ray library for parallel ingestion. Deferred because the core benchmark needs clean serial measurements first. If ingestion is parallelised, it becomes harder to isolate whether a timing difference comes from the backend or the parallelism. Once the six benchmark dimensions are measured serially, Ray could be layered on as an extension to test whether either backend benefits more from concurrent writes.
 
+### PipelineConfig dataclass over plain dict
+
+`resolve_pipeline_config()` originally returned a `dict[str, Any]`. Refactored to return a `@dataclass` (`PipelineConfig` in `utils.py`). Every call site now uses `config.embedding_model` instead of `config["embedding_model"]`. Trade-off: a mechanical find-and-replace across six files for type safety, autocomplete, and catching typos at import time rather than runtime. Done before the pgvector implementation started so the pgvector person builds against the dataclass from day one.
+
 ## Known limitations
 
 ### `get_or_create_collection` ambiguity
