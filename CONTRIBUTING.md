@@ -54,7 +54,11 @@ cd group-project-json-derulo-comeback-tour
 # 2. Create and activate the conda environment
 conda env create -f environment.yml
 conda activate project-d
+```
 
+> **Note:** conda environment creation takes 25-30 minutes on the pip dependency resolution step. This is normal; don't kill it.
+
+```bash
 # 3. Set up environment variables
 cp .env.example .env
 # Edit .env to set PDF_SOURCE_DIR and any other config
@@ -68,6 +72,7 @@ Required `.env` variables:
 | `CHROMA_DIR` | Path to ChromaDB storage directory |
 | `PDF_SOURCE_DIR` | Parent directory containing one subfolder per company |
 | `COLLECTION_NAME` | Collection name for the vector store |
+| `HF_TOKEN` | HuggingFace access token (speeds up model downloads) |
 
 Optional variables with defaults are documented in `utils.py` inside `resolve_pipeline_config()`.
 
@@ -87,6 +92,31 @@ python pipeline.py generate --query "What are the emissions targets?"
 ### Running tests
 
 > **TODO**: Test suite not yet written. Will be added by the benchmarking teammate as a parametrised pytest suite that runs against both backends.
+
+### Running the reference answer evaluation
+
+`reference_answers.json` contains queries with manually verified chunk IDs from the AGL test document. To run bi-encoder retrieval evaluation against it:
+
+```bash
+python -c "
+import json
+from sentence_transformers import SentenceTransformer
+from vector_store import get_vector_store
+from utils import resolve_pipeline_config, evaluate_retrieval
+
+config = resolve_pipeline_config()
+store = get_vector_store(config['collection_name'])
+model = SentenceTransformer(config['embedding_model'])
+
+with open('reference_answers.json') as f:
+    ground_truth = json.load(f)
+
+df = evaluate_retrieval(ground_truth, store, model, k=5)
+print(df.to_string(index=False))
+"
+```
+
+This evaluates bi-encoder retrieval only (no cross-encoder reranking). The reference set is designed for backend equivalence testing: run the same script with `VECTOR_STORE=chroma` and `VECTOR_STORE=pgvector` and compare numbers.
 
 ### Data directories
 

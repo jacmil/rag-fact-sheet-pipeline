@@ -1,0 +1,25 @@
+[
+  {
+    "query": "What are AGL's emissions targets?",
+    "relevant_ids": [
+      "AGL_Carbon_Constrained_Future_elem_0012",
+      "AGL_Carbon_Constrained_Future_elem_0015",
+      "AGL_Carbon_Constrained_Future_elem_0039",
+      "AGL_Carbon_Constrained_Future_elem_0041"
+    ]
+  },
+  {
+    "query": "What power stations does AGL operate?",
+    "relevant_ids": [
+      "AGL_Carbon_Constrained_Future_elem_0006",
+      "AGL_Carbon_Constrained_Future_elem_0019"
+    ]
+  },
+  {
+    "query": "What is AGL's approach to renewable energy investment?",
+    "relevant_ids": [
+      "AGL_Carbon_Constrained_Future_elem_0024",
+      "AGL_Carbon_Constrained_Future_elem_0067"
+    ]
+  }
+]

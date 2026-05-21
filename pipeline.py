@@ -62,7 +62,8 @@ def generate(query: str | None) -> None:
     # Retrieve → generate handoff: extract text from QueryResults
     results: list[QueryResult] = run_retrieve(query, store)
     chunk_texts: list[str] = [r.text for r in results]
-    run_generate(query, chunk_texts)
+    answer = run_generate(query, chunk_texts)
+    click.echo(answer)
 
 
 @cli.command("run-all")
@@ -82,7 +83,8 @@ def run_all(query: str | None) -> None:
     run_embed(store)
     results: list[QueryResult] = run_retrieve(query, store)
     chunk_texts: list[str] = [r.text for r in results]
-    run_generate(query, chunk_texts)
+    answer = run_generate(query, chunk_texts)
+    click.echo(answer)
 
 
 if __name__ == "__main__":

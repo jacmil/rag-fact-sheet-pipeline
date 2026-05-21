@@ -38,6 +38,16 @@ The `run-all` command calls `run_extract()`, `run_embed()`, `run_retrieve()`, an
 
 `embed.py` encodes and stores 256 chunks per batch. Balances memory usage (encoding thousands of chunks at once would spike RAM) against the overhead of repeated `store.add()` calls. Not tuned empirically; 256 is a reasonable default.
 
+## Evaluation
+
+### Reference set evaluates bi-encoder only
+
+`reference_answers.json` and `evaluate_retrieval()` bypass the cross-encoder reranking step. For Project D the comparison is between storage backends, not retrieval strategies. The cross-encoder is the same code path regardless of backend, so including it would add noise without helping isolate backend differences. If someone wants end-to-end retrieval quality metrics, they need a separate evaluation that calls `run_retrieve()` from `retrieve.py`.
+
+### Qwen2.5-1.5B-Instruct for generation
+
+Chose Qwen2.5-1.5B-Instruct as the generation model. TinyLlama-1.1B was too slow on Nuvolos (20+ minutes with no response). Qwen2.5-0.5B is lighter but noticeably worse output. 1.5B fits in 16GB RAM on an M2 without quantisation. On Nuvolos or Linux, 8-bit quantisation via `bitsandbytes` halves memory usage. `bitsandbytes` does not support macOS Apple Silicon, so `generate.py` detects the platform and skips quantisation on Mac.
+
 ## Base pipeline
 
 ### Adapted from a classmate's PS2
