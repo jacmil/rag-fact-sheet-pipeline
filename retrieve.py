@@ -22,19 +22,16 @@ BROAD_K: int = 50
 RERANK_TOP_K: int = 5
 
 
-def get_company_filter(query_text: str) -> dict[str, str] | None:
+def get_company_filter(query_text: str, config: dict) -> dict[str, str] | None:
     """Return a metadata company filter if the query names a tracked company.
 
-    Add new companies here as needed. Returns None if no company is
-    detected, which means the query runs against the full collection.
+    Reads company names from config rather than hardcoding them.
     """
     query_lower: str = query_text.lower()
 
-    # Mapping from keyword to canonical company name in metadata
-    if "hershey" in query_lower:
-        return {"company": "Hershey Company"}
-    if "nomad" in query_lower:
-        return {"company": "Nomad Foods"}
+    for company_name in config["company_dirs"]:
+        if company_name.lower().split()[0] in query_lower:
+            return {"company": company_name}
 
     return None
 
@@ -43,6 +40,7 @@ def retrieve_chunks(
     query_text: str,
     store: VectorStore,
     model: SentenceTransformer,
+    config: dict,
     k: int = 5,
 ) -> list[QueryResult]:
     """Embed a query and retrieve the top-k matching chunks.
@@ -55,7 +53,7 @@ def retrieve_chunks(
         0
     ]  # (embed_dim,) — single query vector
 
-    where_filter: dict[str, str] | None = get_company_filter(query_text)
+    where_filter: dict[str, str] | None = get_company_filter(query_text, config)
 
     if where_filter:
         logger.info(f"Applying filter: {where_filter}")
@@ -123,7 +121,7 @@ def run_retrieve(
     reranker: CrossEncoder = CrossEncoder(config["reranking_model"])
 
     # Stage 1: broad retrieval with bi-encoder
-    results: list[QueryResult] = retrieve_chunks(query_text, store, model, k=BROAD_K)
+    results: list[QueryResult] = retrieve_chunks(query_text, store, model, config, k=BROAD_K)
     # Stage 2: rerank candidates with cross-encoder
     results = rerank_chunks(query_text, results, reranker, top_k=RERANK_TOP_K)
 

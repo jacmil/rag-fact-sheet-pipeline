@@ -77,14 +77,6 @@ def resolve_pipeline_config() -> dict:
 #####################################
 # Chunking
 #####################################
-def get_raw_texts(elements: list) -> list[str]:
-    """Extract clean text strings from unstructured elements."""
-    return [
-        el.text.strip()
-        for el in elements
-        if getattr(el, "text", None) and el.text.strip()
-    ]
-
 
 def build_sections_from_elements(elements: list) -> list[dict]:
     """Group elements into header-delimited sections with running title context."""
@@ -211,45 +203,6 @@ def emit_chunks_from_sections(
                     "element_types": sorted(section["element_types"]),
                 }
             )
-
-    return chunks
-
-
-def chunk_by_char_limit(
-    elements: list,
-    char_limit: int = 1000,
-    source_label: str = "",
-) -> list[dict]:
-    """Strategy A: chunk by cumulative character limit."""
-    raw_texts = get_raw_texts(elements)
-    chunks: list[dict] = []
-    buffer: list[str] = []
-    buffer_len = 0
-
-    for text in raw_texts:
-        if buffer_len + len(text) > char_limit and buffer:
-            chunks.append(
-                {
-                    "id": f"char_{len(chunks):04d}",
-                    "text": " ".join(buffer),
-                    "strategy": "char_limit",
-                    "source": source_label,
-                }
-            )
-            buffer = []
-            buffer_len = 0
-        buffer.append(text)
-        buffer_len += len(text)
-
-    if buffer:
-        chunks.append(
-            {
-                "id": f"char_{len(chunks):04d}",
-                "text": " ".join(buffer),
-                "strategy": "char_limit",
-                "source": source_label,
-            }
-        )
 
     return chunks
 

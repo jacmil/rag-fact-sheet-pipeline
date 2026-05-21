@@ -1,10 +1,8 @@
 """Factory that returns the correct vector store backend from .env config."""
 
 from __future__ import annotations
-
 import logging
 import os
-
 from .types import VectorStore
 
 logger = logging.getLogger(__name__)
