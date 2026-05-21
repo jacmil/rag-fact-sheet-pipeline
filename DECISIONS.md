@@ -114,6 +114,10 @@ A teammate proposed using the Ray library for parallel ingestion. Deferred becau
 
 `resolve_pipeline_config()` originally returned a `dict[str, Any]`. Refactored to return a `@dataclass` (`PipelineConfig` in `utils.py`). Every call site now uses `config.embedding_model` instead of `config["embedding_model"]`. Trade-off: a mechanical find-and-replace across six files for type safety, autocomplete, and catching typos at import time rather than runtime. Done before the pgvector implementation started so the pgvector person builds against the dataclass from day one.
 
+### requirements.txt and requirements-lock.txt
+
+Kept the hand-written requirements.txt with comments and logical grouping. Added requirements-lock.txt (pip freeze output) for exact version pinning. The hand-written file is what humans read; the lock file is what reproduces the environment exactly.
+
 ## Known limitations
 
 ### `get_or_create_collection` ambiguity
