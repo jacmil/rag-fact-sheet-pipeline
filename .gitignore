@@ -211,3 +211,7 @@ __marimo__/
 
 condaenv.*
 data/
+
+./xet/logs/
+./REDACTEDQuf/
+
