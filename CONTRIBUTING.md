@@ -102,11 +102,11 @@ python -c "
 import json
 from sentence_transformers import SentenceTransformer
 from vector_store import get_vector_store
-from utils import resolve_pipeline_config, evaluate_retrieval
+from utils import resolve_pipeline_config, PipelineConfig, evaluate_retrieval
 
 config = resolve_pipeline_config()
-store = get_vector_store(config['collection_name'])
-model = SentenceTransformer(config['embedding_model'])
+store = get_vector_store(config.collection_name)
+model = SentenceTransformer(config.embedding_model)
 
 with open('reference_answers.json') as f:
     ground_truth = json.load(f)
