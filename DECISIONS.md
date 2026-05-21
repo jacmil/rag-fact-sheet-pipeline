@@ -84,15 +84,31 @@ The fallback query string `"What are the emissions targets for this company?"` w
 
 Pipeline infrastructure owner builds the machinery and documents how to add new companies. The benchmarker decides which documents to feed and handles data selection for measurement. Config is parameterised via `.env` so adding documents is a config change, not an infra change.
 
+### Directory-based company discovery over per-company env vars
+
+Originally had `HERSHEY_PDF_DIR` and `NOMAD_PDF_DIR` as separate env vars. Replaced with a single `PDF_SOURCE_DIR` that the pipeline scans for subdirectories. Folder names become company labels (underscores replaced by spaces). To add a company the benchmarker creates a folder and drops PDFs in it. No code or `.env` change needed. Considered a `COMPANY_N_NAME`/`COMPANY_N_DIR` pattern but it scales worse and clutters `.env` as companies increase.
+
+### Warning not error for empty company folders
+
+If a company subdirectory exists but contains no PDFs matching the glob, the pipeline logs a warning and continues rather than crashing. The benchmarker may have 10 company folders with only 8 populated. Crashing the whole pipeline for one empty folder wastes time.
+
+### Pruned dead chunking code
+
+`chunk_by_char_limit()` (Strategy A, fixed character limit) and `get_raw_texts()` were carried over from the base PS2 code but never called by the pipeline. Only `chunk_by_element_type()` (Strategy B) is used. Removed both to keep the codebase to what is actually exercised. The benchmarker can reintroduce Strategy A if they want to compare chunking strategies.
+
+### Ray/multithreading deferred
+
+A teammate proposed using the Ray library for parallel ingestion. Deferred because the core benchmark needs clean serial measurements first. If ingestion is parallelised, it becomes harder to isolate whether a timing difference comes from the backend or the parallelism. Once the six benchmark dimensions are measured serially, Ray could be layered on as an extension to test whether either backend benefits more from concurrent writes.
+
 ## Known limitations
 
 ### `get_or_create_collection` ambiguity
 
 ChromaDB's `get_or_create_collection` can't distinguish "created a new collection" from "loaded an existing one" without checking count before and after. Flagged in `chroma.py` but not resolved. If strict create-vs-load semantics are ever needed, the factory would need two paths.
 
-### Hardcoded company filter in retrieve
+### Company filter reads from config
 
-`get_company_filter()` in `retrieve.py` maps query keywords to company names. Currently hardcoded to Hershey and Nomad. Needs parameterising from config or collection metadata before the benchmarker adds more companies.
+`get_company_filter()` in `retrieve.py` originally had hardcoded company names (Hershey, Nomad). Refactored to read company names from `config["company_dirs"]` and match against the query. Adding a company folder to `PDF_SOURCE_DIR` automatically makes it filterable in retrieval. No code change needed.
 
 ### Evaluation function refactored to use VectorStore
 

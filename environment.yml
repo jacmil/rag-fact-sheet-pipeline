@@ -13,9 +13,7 @@ dependencies:
   # Core pipeline
   - numpy
   - pandas
-
-  # Torch (CPU/MPS for macOS, no CUDA)
-  - pytorch::pytorch
+  - pip
 
   - pip:
     # Pipeline CLI and utilities

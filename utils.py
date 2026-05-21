@@ -1,7 +1,11 @@
+import logging
 import os
 from pathlib import Path
+
 from dotenv import load_dotenv
 from vector_store.types import VectorStore
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_QUERY: str = "What are the emissions targets for this company?"
 
@@ -28,26 +32,34 @@ def bootstrap_runtime_env(dotenv_path: str = ".env") -> None:
 
 
 def resolve_pipeline_config() -> dict:
-    """Resolve runtime configuration for the multi-company PDF pipeline."""
+    """Resolve runtime configuration from .env for the pipeline.
+
+    Company discovery is directory-based: PDF_SOURCE_DIR contains one
+    subfolder per company. Folder names become company labels, with
+    underscores replaced by spaces. To add a company, create a folder
+    and drop PDFs in it. No code change needed.
+    """
     bootstrap_runtime_env()
 
+    pdf_source_dir = Path(require_env("PDF_SOURCE_DIR"))
+    if not pdf_source_dir.is_dir():
+        raise ValueError(f"PDF_SOURCE_DIR is not a valid directory: {pdf_source_dir}")
+
     company_dirs = {
-        "Hershey Company": Path(require_env("HERSHEY_PDF_DIR")),
-        "Nomad Foods": Path(require_env("NOMAD_PDF_DIR")),
-        # Add more companies here later if needed
-    }
+        d.name.replace("_", " "): d
+        for d in sorted(pdf_source_dir.iterdir())
+            if d.is_dir()
+            }
+
+    if not company_dirs:
+        raise ValueError(f"No company subdirectories found in {pdf_source_dir}")
 
     pdf_glob = os.getenv("PDF_GLOB", "*.pdf").strip() or "*.pdf"
 
     for company, company_dir in company_dirs.items():
-        if not company_dir.is_dir():
-            raise ValueError(f"{company} directory is not valid: {company_dir}")
-
         pdf_paths = sorted(company_dir.glob(pdf_glob))
         if not pdf_paths:
-            raise ValueError(
-                f"No PDFs found for {company} in {company_dir} with pattern: {pdf_glob}"
-            )
+            logger.warning(f"No PDFs found for {company} in {company_dir}")
 
     output_dir = Path(os.getenv("OUTPUT_DIR", "data/interim"))
 

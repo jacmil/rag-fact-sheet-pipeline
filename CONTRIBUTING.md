@@ -31,8 +31,6 @@ vector_store/
 
 ## Known bugs and areas for improvement
 
-- `get_company_filter()` in `retrieve.py` has hardcoded company names (Hershey, Nomad). Needs parameterising from config or collection metadata before adding new companies.
-- `evaluate_retrieval()` in `utils.py` calls ChromaDB directly instead of going through the `VectorStore` interface. Needs refactoring for backend-agnostic benchmarking.
 - `resolve_pipeline_config()` returns a plain `dict` with string keys. A `@dataclass` would give type safety and autocomplete across all files that use it.
 - `bitsandbytes` does not work on macOS Apple Silicon. Generation runs without quantisation on Mac.
 
@@ -59,7 +57,7 @@ conda activate project-d
 
 # 3. Set up environment variables
 cp .env.example .env
-# Edit .env to set PDF directory paths and any other config
+# Edit .env to set PDF_SOURCE_DIR and any other config
 ```
 
 Required `.env` variables:
@@ -68,8 +66,7 @@ Required `.env` variables:
 |----------|-------------|
 | `VECTOR_STORE` | `chroma` or `pgvector` |
 | `CHROMA_DIR` | Path to ChromaDB storage directory |
-| `HERSHEY_PDF_DIR` | Path to Hershey Company PDF folder |
-| `NOMAD_PDF_DIR` | Path to Nomad Foods PDF folder |
+| `PDF_SOURCE_DIR` | Parent directory containing one subfolder per company |
 | `COLLECTION_NAME` | Collection name for the vector store |
 
 Optional variables with defaults are documented in `utils.py` inside `resolve_pipeline_config()`.
@@ -100,6 +97,22 @@ python pipeline.py generate --query "What are the emissions targets?"
 - `data/chromadb/` — ChromaDB persistent storage
 
 All reproducible from source PDFs by re-running the pipeline.
+
+## Adding new documents
+
+Create a subfolder in `PDF_SOURCE_DIR` named after the company, using underscores for spaces:
+
+```
+data/pdfs/
+  Hershey_Company/
+    report_2023.pdf
+  Nomad_Foods/
+    report_2023.pdf
+  Your_New_Company/
+    report_2024.pdf
+```
+
+The pipeline discovers companies from folder names at runtime. Underscores are replaced by spaces in company labels. No code or `.env` change needed. Run `python pipeline.py extract` to process the new documents.
 
 ## Adding a new vector store backend
 
