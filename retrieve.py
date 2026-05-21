@@ -3,14 +3,13 @@ from __future__ import annotations
 import logging
 import os
 
-from networkx import config
 import coloredlogs
 
 import numpy as np
 from sentence_transformers import SentenceTransformer, CrossEncoder
 
 from vector_store import VectorStore, QueryResult
-from utils import resolve_pipeline_config, DEFAULT_QUERY
+from utils import resolve_pipeline_config, PipelineConfig, DEFAULT_QUERY
 
 
 logger = logging.getLogger(__name__)
@@ -22,14 +21,14 @@ BROAD_K: int = 50
 RERANK_TOP_K: int = 5
 
 
-def get_company_filter(query_text: str, config: dict) -> dict[str, str] | None:
+def get_company_filter(query_text: str, config: PipelineConfig) -> dict[str, str] | None:
     """Return a metadata company filter if the query names a tracked company.
 
     Reads company names from config rather than hardcoding them.
     """
     query_lower: str = query_text.lower()
 
-    for company_name in config["company_dirs"]:
+    for company_name in config.company_dirs:
         if company_name.lower().split()[0] in query_lower:
             return {"company": company_name}
 
@@ -40,7 +39,7 @@ def retrieve_chunks(
     query_text: str,
     store: VectorStore,
     model: SentenceTransformer,
-    config: dict,
+    config: PipelineConfig,
     k: int = 5,
 ) -> list[QueryResult]:
     """Embed a query and retrieve the top-k matching chunks.
@@ -107,18 +106,18 @@ def run_retrieve(
     store: VectorStore | None = None,
 ) -> list[QueryResult]:
     """Two-stage retrieval: broad bi-encoder pass, then cross-encoder rerank."""
-    config: dict = resolve_pipeline_config()
+    config: PipelineConfig = resolve_pipeline_config()
     query_text: str = query or os.getenv("QUERY_TEXT", DEFAULT_QUERY)
 
     # Allow standalone use without a pre-created store
     if store is None:
         from vector_store import get_vector_store
 
-        store = get_vector_store(config["collection_name"])
+        store = get_vector_store(config.collection_name)
 
     logger.info(f"Query: {query_text}")
-    model: SentenceTransformer = SentenceTransformer(config["embedding_model"])
-    reranker: CrossEncoder = CrossEncoder(config["reranking_model"])
+    model: SentenceTransformer = SentenceTransformer(config.embedding_model)
+    reranker: CrossEncoder = CrossEncoder(config.reranking_model)
 
     # Stage 1: broad retrieval with bi-encoder
     results: list[QueryResult] = retrieve_chunks(query_text, store, model, config, k=BROAD_K)

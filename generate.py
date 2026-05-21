@@ -7,7 +7,7 @@ import coloredlogs
 
 from transformers import pipeline as hf_pipeline, Pipeline
 
-from utils import resolve_pipeline_config, DEFAULT_QUERY
+from utils import resolve_pipeline_config, PipelineConfig, DEFAULT_QUERY
 
 
 logger = logging.getLogger(__name__)
@@ -17,14 +17,14 @@ logger = logging.getLogger(__name__)
 MAX_NEW_TOKENS: int = 512
 
 
-def load_generation_model(config: dict) -> Pipeline:
+def load_generation_model(config: PipelineConfig) -> Pipeline:
     """Load the generation model, with 8-bit quantisation where supported.
 
     bitsandbytes does not work on macOS Apple Silicon (no CUDA backend).
     On those systems the model loads at full precision. On Linux/Nuvolos
     systems, 8-bit quantisation roughly halves memory usage.
     """
-    model_name: str = config["generation_model"]
+    model_name: str = config.generation_model
     logger.info(f"Loading generation model: {model_name}")
 
     model_kwargs: dict = {}
@@ -133,7 +133,7 @@ def run_generate(
     Receives chunk texts directly from the pipeline orchestrator.
     The retrieve -> generate handoff is managed by pipeline.py, not here.
     """
-    config: dict = resolve_pipeline_config()
+    config: PipelineConfig = resolve_pipeline_config()
     final_query: str = query_text or os.getenv("QUERY_TEXT", DEFAULT_QUERY)
 
     if not chunk_texts:
@@ -158,7 +158,7 @@ if __name__ == "__main__":
     from vector_store import get_vector_store
     from retrieve import run_retrieve
 
-    config: dict = resolve_pipeline_config()
-    store = get_vector_store(config["collection_name"])
+    config: PipelineConfig = resolve_pipeline_config()
+    store = get_vector_store(config.collection_name)
     results = run_retrieve(store=store)
     run_generate(chunk_texts=[r.text for r in results])

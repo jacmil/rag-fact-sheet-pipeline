@@ -8,7 +8,7 @@ from embed import run_embed
 from retrieve import run_retrieve
 from generate import run_generate
 from vector_store import get_vector_store, VectorStore, QueryResult
-from utils import resolve_pipeline_config
+from utils import resolve_pipeline_config, PipelineConfig
 
 
 def _get_store() -> VectorStore:
@@ -17,8 +17,8 @@ def _get_store() -> VectorStore:
     Called per-command rather than at group level so that extract
     (which doesn't need a store) doesn't pay the setup cost.
     """
-    config: dict = resolve_pipeline_config()
-    return get_vector_store(config["collection_name"])
+    config: PipelineConfig = resolve_pipeline_config()
+    return get_vector_store(config.collection_name)
 
 
 @click.group()

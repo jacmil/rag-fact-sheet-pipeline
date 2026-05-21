@@ -9,7 +9,7 @@ from pathlib import Path
 from sentence_transformers import SentenceTransformer
 
 from vector_store import VectorStore
-from utils import resolve_pipeline_config
+from utils import resolve_pipeline_config, PipelineConfig
 
 
 logger = logging.getLogger(__name__)
@@ -21,11 +21,11 @@ BATCH_SIZE: int = 256
 
 def run_embed(store: VectorStore) -> None:
     """Load chunks, generate embeddings, and store via the vector store backend."""
-    config: dict = resolve_pipeline_config()
-    chunks: list[dict] = load_all_chunks(config["output_dir"])
+    config: PipelineConfig = resolve_pipeline_config()
+    chunks: list[dict] = load_all_chunks(config.output_dir)
     logger.info(f"Total chunks loaded: {len(chunks)}")
 
-    model: SentenceTransformer = SentenceTransformer(config["embedding_model"])
+    model: SentenceTransformer = SentenceTransformer(config.embedding_model)
     logger.info("Embedding model loaded")
 
     add_chunks_to_store(chunks, store, model)
@@ -143,6 +143,6 @@ if __name__ == "__main__":
     # Standalone run for testing: create store from config
     from vector_store import get_vector_store
 
-    config: dict = resolve_pipeline_config()
-    store: VectorStore = get_vector_store(config["collection_name"])
+    config: PipelineConfig = resolve_pipeline_config()
+    store: VectorStore = get_vector_store(config.collection_name)
     run_embed(store)

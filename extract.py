@@ -7,36 +7,36 @@ from pathlib import Path
 from tqdm import tqdm
 
 from unstructured.partition.pdf import partition_pdf
-from utils import resolve_pipeline_config, chunk_by_element_type
+from utils import resolve_pipeline_config, PipelineConfig, chunk_by_element_type
 
 logger = logging.getLogger(__name__)
 
 
 def run_extract() -> None:
     """Extract text from PDFs and chunk into segments."""
-    config = resolve_pipeline_config()
+    config: PipelineConfig = resolve_pipeline_config()
     raw_dir = setup_directories(config)
-    log_extraction_summary(config["company_dirs"], config["pdf_glob"])
+    log_extraction_summary(config.company_dirs, config.pdf_glob)
     all_pdfs = collect_all_pdfs(config)
     extract_all_pdfs(all_pdfs, raw_dir)
-    chunk_all_pdfs(all_pdfs, raw_dir, config["output_dir"])
+    chunk_all_pdfs(all_pdfs, raw_dir, config.output_dir)
 
 
-def setup_directories(config: dict) -> Path:
+def setup_directories(config: PipelineConfig) -> Path:
     """Create output directories and return raw_dir path."""
-    output_dir = config["output_dir"]
+    output_dir = config.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
     raw_dir = output_dir / "raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
     return raw_dir
 
 
-def collect_all_pdfs(config: dict) -> list[tuple[str, Path]]:
+def collect_all_pdfs(config: PipelineConfig) -> list[tuple[str, Path]]:
     """Collect all PDF paths across all companies as a flat list."""
     return [
         (company, pdf_path)
-        for company, company_dir in config["company_dirs"].items()
-        for pdf_path in sorted(company_dir.glob(config["pdf_glob"]))
+        for company, company_dir in config.company_dirs.items()
+        for pdf_path in sorted(company_dir.glob(config.pdf_glob))
     ]
 
 

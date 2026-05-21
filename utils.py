@@ -1,5 +1,6 @@
 import logging
 import os
+from dataclasses import dataclass
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -8,6 +9,23 @@ from vector_store.types import VectorStore
 logger = logging.getLogger(__name__)
 
 DEFAULT_QUERY: str = "What are the emissions targets for this company?"
+
+
+@dataclass
+class PipelineConfig:
+    """Typed configuration resolved from .env at runtime."""
+
+    company_dirs: dict[str, Path]
+    pdf_glob: str
+    output_dir: Path
+    chroma_dir: Path
+    embedding_model: str
+    reranking_model: str
+    generation_model: str
+    vector_store_backend: str
+    collection_name: str
+    pg_connection_string: str
+
 
 def require_env(name: str) -> str:
     """Return a required environment variable value or raise a clear setup error."""
@@ -31,7 +49,7 @@ def bootstrap_runtime_env(dotenv_path: str = ".env") -> None:
         os.environ["KMP_DUPLICATE_LIB_OK"] = os.getenv("KMP_DUPLICATE_LIB_OK", "TRUE")
 
 
-def resolve_pipeline_config() -> dict:
+def resolve_pipeline_config() -> PipelineConfig:
     """Resolve runtime configuration from .env for the pipeline.
 
     Company discovery is directory-based: PDF_SOURCE_DIR contains one
@@ -63,27 +81,22 @@ def resolve_pipeline_config() -> dict:
 
     output_dir = Path(os.getenv("OUTPUT_DIR", "data/interim"))
 
-    return {
-        "company_dirs": company_dirs,
-        "pdf_glob": pdf_glob,
-        "output_dir": output_dir,
-        "chroma_dir": Path(os.getenv("CHROMA_DIR", "data/chromadb")),
-        "embedding_model": os.getenv(
+    return PipelineConfig(
+        company_dirs=company_dirs,
+        pdf_glob=pdf_glob,
+        output_dir=output_dir,
+        chroma_dir=Path(os.getenv("CHROMA_DIR", "data/chromadb")),
+        embedding_model=os.getenv(
             "EMBEDDING_MODEL", "sentence-transformers/multi-qa-MiniLM-L6-cos-v1"
         ),
-        "reranking_model": os.getenv(
+        reranking_model=os.getenv(
             "RERANKING_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2"
         ),
-        "generation_model": os.getenv("GENERATION_MODEL", "Qwen/Qwen2.5-1.5B-Instruct"),
-        # Vector store abstraction config (Project D)
-        "vector_store_backend": os.getenv(
-            "VECTOR_STORE", "chroma"
-        ),  # "chroma" or "pgvector"
-        "collection_name": os.getenv("COLLECTION_NAME", "tpi_vectors"),
-        "pg_connection_string": os.getenv(
-            "PG_CONNECTION_STRING", ""
-        ),  # required when backend=pgvector
-    }
+        generation_model=os.getenv("GENERATION_MODEL", "Qwen/Qwen2.5-1.5B-Instruct"),
+        vector_store_backend=os.getenv("VECTOR_STORE", "chroma"),
+        collection_name=os.getenv("COLLECTION_NAME", "tpi_vectors"),
+        pg_connection_string=os.getenv("PG_CONNECTION_STRING", ""),
+    )
 
 
 #####################################
@@ -274,4 +287,3 @@ def evaluate_retrieval(
         })
 
     return pd.DataFrame(rows)
-
