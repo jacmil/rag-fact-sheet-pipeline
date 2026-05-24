@@ -1,0 +1,26 @@
+# Postgres + pgvector for local development (Person 2).
+# Image pin matches project brief; refine after CLEAR review (see SYLVAN.md).
+services:
+  postgres:
+    image: pgvector/pgvector:0.7.1-pg16
+    container_name: tpi-pgvector
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgvector_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-tpi} -d ${POSTGRES_DB:-tpi_vectors}",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  pgvector_data:
