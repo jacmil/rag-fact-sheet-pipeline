@@ -14,11 +14,49 @@ Both ChromaDB and pgvector handle string metadata reliably. Mixed types (lists, 
 
 ### Score as similarity, not distance
 
-ChromaDB returns distances (lower = more similar). The interface returns similarity scores (higher = more similar), computed as `1 - distance` inside `chroma.py`. This keeps the consumer code (retrieve, benchmark) consistent regardless of backend. The pgvector implementation will need to do its own conversion.
+ChromaDB returns distances (lower = more similar). The interface returns similarity scores (higher = more similar), computed as `1 - distance` inside each backend implementation. `chroma.py` converts Chroma distances; `pgvector.py` converts pgvector cosine distances from SQL. This keeps the consumer code (retrieve, benchmark) consistent regardless of backend. Validated on the AGL reference set: both backends return identical recall@5 and top-5 rankings.
 
 ### Lazy imports in factory
 
 `factory.py` imports `ChromaStore` and `PgVectorStore` inside their respective `if` branches, not at module level. This means running with `VECTOR_STORE=chroma` doesn't require `sqlalchemy` or `pgvector` installed, and vice versa. Matters for the benchmarker if they want to test one backend at a time.
+
+## pgvector backend
+
+### Single `chunk_records` table
+
+Postgres stores chunks in one table rather than mirroring ChromaDB's collection abstraction at the schema level. Logical collections are represented by a `collection_name` column (default `tpi_vectors`). Trade-off: simpler schema and straightforward SQL inspection; collection isolation is application-level, not separate tables per collection.
+
+### Fixed `vector(384)` column
+
+The embedding model (`multi-qa-MiniLM-L6-cos-v1`) produces 384-dimensional vectors. The Alembic migration declares `embedding vector(384)` so Postgres rejects wrong-sized vectors at insert time rather than silently corrupting similarity search.
+
+### JSONB metadata with GIN index
+
+Metadata is stored as `jsonb`, mapped in SQLAlchemy as `metadata_` (the ORM reserves the name `metadata`). A GIN index on the column supports filtered queries. Values remain string-only at the boundary, matching the ChromaDB contract.
+
+### Metadata filtering via SQL WHERE
+
+`PgVectorStore.query()` applies `where={"company": "AGL"}` as JSONB equality filters (`metadata->>'key' = value`) before ordering by cosine distance. ChromaDB post-filters on HNSW; pgvector pre-filters in SQL. The benchmarker should measure both filtered and unfiltered query latency separately.
+
+### Bulk upsert via table insert, not ORM `session.add()`
+
+Re-running `python pipeline.py embed` must not crash on duplicate chunk IDs. pgvector uses PostgreSQL `INSERT … ON CONFLICT (chunk_id) DO UPDATE`, matching ChromaDB's `upsert()` semantics. Bulk writes go through `ChunkRecord.__table__` with `pg_insert().on_conflict_do_update()` rather than ORM `session.add()`, because the `metadata` column name collides with SQLAlchemy's reserved `metadata` attribute on declarative models.
+
+### Docker Compose for local Postgres only
+
+ChromaDB persists to files under `data/chromadb/` with no server process. Postgres requires a running database, so `docker-compose.yml` provides `pgvector/pgvector:0.7.1-pg16` (same image family as the CLEAR reference repo). Docker is only needed when `VECTOR_STORE=pgvector`; Chroma-only workflows do not require it.
+
+### Alembic for reproducible schema
+
+Table creation is managed by Alembic (`alembic upgrade head`), not implicit ORM `create_all()`. Fresh-machine setup is: start Docker, run migrations, smoke test, embed. Schema changes get versioned revision files rather than ad-hoc SQL.
+
+### psycopg v3 connection strings
+
+SQLAlchemy connects via psycopg v3 (`postgresql+psycopg://…`). Bare `postgresql://` URLs can fail with a missing `psycopg2` driver. `pgvector.py` normalises common URL forms, but `.env.example` documents the explicit driver prefix to avoid setup confusion.
+
+### Backend equivalence validated before merge
+
+pgvector recall@5 was checked against the ChromaDB baseline on `reference_answers.json` (bi-encoder only, k=5): emissions targets 0.25, power stations 1.00, renewables investment 1.00. Top-5 chunk IDs and order matched on all three queries. If numbers diverge after changes, check upsert logic and cosine score conversion in `pgvector.py` first; `retrieve.py` is backend-agnostic and should not need changes.
 
 ## Pipeline integration
 
