@@ -45,7 +45,7 @@ Data comes from TPI Centre Carbon Performance assessment PDFs (hosted on SharePo
    python pipeline.py generate --query "What are the emissions targets?"
    ```
 
-For developer setup, internal architecture, and the reference answer evaluation, see [CONTRIBUTING.md](CONTRIBUTING.md).
+For developer setup, internal architecture, pgvector Docker setup, and the reference answer evaluation, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Configuration
 
@@ -56,7 +56,8 @@ All configuration is via `.env`. Required and optional variables are documented 
 | `PDF_SOURCE_DIR` | Yes | Parent directory with one subfolder per company |
 | `VECTOR_STORE` | Yes | `chroma` or `pgvector` |
 | `CHROMA_DIR` | When using chroma | Path to ChromaDB storage |
-| `PG_CONNECTION_STRING` | When using pgvector | Postgres connection string |
+| `PG_CONNECTION_STRING` | When using pgvector | Postgres connection string (`postgresql+psycopg://…`) |
+| `DATABASE_URL` | When using pgvector | Same URL for Alembic migrations |
 | `COLLECTION_NAME` | No (default: `tpi_vectors`) | Vector store collection name |
 | `EMBEDDING_MODEL` | No (default: `multi-qa-MiniLM-L6-cos-v1`) | HuggingFace embedding model |
 | `GENERATION_MODEL` | No (default: `Qwen2.5-1.5B-Instruct`) | HuggingFace generation model |

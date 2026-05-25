@@ -34,6 +34,8 @@ dependencies:
     # Vector store: ChromaDB backend
     - chromadb
 
-    # Vector store: pgvector backend (uncomment when needed)
-    # - sqlalchemy>=2.0
-    # - pgvector
+    # Vector store: pgvector backend
+    - sqlalchemy>=2.0
+    - pgvector
+    - psycopg[binary]
+    - alembic
