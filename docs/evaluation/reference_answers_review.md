@@ -28,6 +28,12 @@ Year coverage runs from 2016 to 2024. The labelled companies are AGL, Alliant,
 BHP, Capital Power, Center Point, Chubu, Danone, Freeport, Glencore, Hershey
 Company, Kraft Heinz, Orkla, Rio Tinto, Vale, and Vedanta.
 
+The labels were created manually. For each question, the PDF was inspected,
+candidate extracted chunks were searched in `reference_answer_builder.ipynb`,
+and the final `chunk_id` values were added to `reference_answers.json` only
+after reading the full chunk text. This matters because Recall@5 depends on the
+manual judgement of which chunks actually contain the answer.
+
 ## Current Benchmark Result
 
 The latest full local benchmark used all 20 queries with `k=5` and 3 query
@@ -66,9 +72,13 @@ and sector.
 1. Add PDFs under `data/pdfs/<Company Name>/`.
 2. Run `python pipeline.py extract` to create chunk JSONL files.
 3. Add company and document metadata to `document_metadata.json`.
-4. Use `reference_answer_builder.ipynb` to search and inspect full chunk text.
-5. Add each query to `reference_answers.json` with a `relevant_ids` list.
-6. Validate that every labelled chunk ID exists before running the benchmark.
+4. Read the relevant page or passage in the source PDF.
+5. Use `reference_answer_builder.ipynb` to search candidate chunks by phrase,
+   page, company, or source file.
+6. Inspect the full chunk text, not only the truncated preview.
+7. Manually copy the selected `chunk_id` values into `reference_answers.json`
+   under the query's `relevant_ids` list.
+8. Validate that every labelled chunk ID exists before running the benchmark.
 
 ## Labelling Rules
 
