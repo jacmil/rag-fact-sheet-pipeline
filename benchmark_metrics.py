@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import shutil
 import subprocess
 import tempfile
@@ -10,6 +11,7 @@ from typing import Any
 
 import numpy as np
 import pandas as pd
+from pypdf import PdfReader
 from sentence_transformers import SentenceTransformer
 
 from embed import BATCH_SIZE, build_chunk_records, load_all_chunks
@@ -17,7 +19,10 @@ from utils import PipelineConfig, resolve_pipeline_config
 from vector_store import VectorStore
 
 
+logging.getLogger("pypdf").setLevel(logging.ERROR)
+
 DEFAULT_BENCHMARK_COLLECTION = "tpi_vectors_benchmark"
+DEFAULT_PAGE_TARGETS = (20, 60)
 BACKEND_FILES = {
     "chroma": Path("vector_store/chroma.py"),
     "pgvector": Path("vector_store/pgvector.py"),
@@ -130,6 +135,88 @@ def describe_filter_cases(metadatas: list[dict[str, str]]) -> pd.DataFrame:
             }
         )
     return pd.DataFrame(rows)
+
+
+def count_pdf_pages(pdf_path: Path) -> int:
+    """Return the number of pages in a PDF."""
+    return len(PdfReader(str(pdf_path)).pages)
+
+
+def closest_page_target(pages: int, targets: tuple[int, ...] = DEFAULT_PAGE_TARGETS) -> int:
+    """Return the target page count closest to the document page count."""
+    return min(targets, key=lambda target: (abs(pages - target), target))
+
+
+def document_page_inventory(
+    config: PipelineConfig | None = None,
+    chunks: list[dict] | None = None,
+    page_threshold: int = 60,
+    page_targets: tuple[int, ...] = DEFAULT_PAGE_TARGETS,
+) -> pd.DataFrame:
+    """List PDFs with page counts, chunk counts, and size group labels."""
+    resolved_config = config or resolve_pipeline_config()
+    loaded_chunks = chunks if chunks is not None else load_all_chunks(resolved_config.output_dir)
+
+    chunk_counts: dict[tuple[str, str], int] = {}
+    for chunk in loaded_chunks:
+        key = (chunk["company"], chunk["source_file"])
+        chunk_counts[key] = chunk_counts.get(key, 0) + 1
+
+    rows: list[dict[str, Any]] = []
+    for company, company_dir in sorted(resolved_config.company_dirs.items()):
+        for pdf_path in sorted(company_dir.glob(resolved_config.pdf_glob)):
+            pages = count_pdf_pages(pdf_path)
+            source_file = pdf_path.stem
+            page_group = (
+                f"below_{page_threshold}_pages"
+                if pages < page_threshold
+                else f"{page_threshold}_pages_or_more"
+            )
+            page_target = closest_page_target(pages, page_targets)
+            rows.append(
+                {
+                    "company": company,
+                    "source_file": source_file,
+                    "pdf_path": str(pdf_path),
+                    "pages": pages,
+                    "page_group": page_group,
+                    "closest_page_target": page_target,
+                    "page_target_distance": abs(pages - page_target),
+                    "page_target_group": f"closest_to_{page_target}_pages",
+                    "chunks": chunk_counts.get((company, source_file), 0),
+                }
+            )
+
+    return pd.DataFrame(rows).sort_values(["page_group", "pages", "company"])
+
+
+def split_chunks_by_inventory_group(
+    chunks: list[dict],
+    inventory: pd.DataFrame,
+    group_column: str,
+) -> dict[str, list[dict]]:
+    """Group chunk records using a document-level group column."""
+    group_by_doc = {
+        (row.company, row.source_file): getattr(row, group_column)
+        for row in inventory.itertuples(index=False)
+    }
+    grouped: dict[str, list[dict]] = {}
+
+    for chunk in chunks:
+        group = group_by_doc.get((chunk["company"], chunk["source_file"]))
+        if group is None:
+            continue
+        grouped.setdefault(group, []).append(chunk)
+
+    return grouped
+
+
+def split_chunks_by_page_group(
+    chunks: list[dict],
+    inventory: pd.DataFrame,
+) -> dict[str, list[dict]]:
+    """Group chunk records using the page_group assigned to each source PDF."""
+    return split_chunks_by_inventory_group(chunks, inventory, "page_group")
 
 
 def deployment_complexity_metrics(
@@ -336,6 +423,187 @@ def benchmark_ingestion(
     )
 
     return ingestion, pd.DataFrame(batch_rows)
+
+
+def run_page_group_ingestion_benchmark(
+    backends: tuple[str, ...] = ("chroma", "pgvector"),
+    page_threshold: int = 60,
+    batch_size: int = BATCH_SIZE,
+    collection_prefix: str = "tpi_vectors_page_group_benchmark",
+    cleanup: bool = True,
+) -> dict[str, Any]:
+    """Compare ingestion throughput for PDFs below/above a page threshold."""
+    config = resolve_pipeline_config()
+    chunks = load_all_chunks(config.output_dir)
+    inventory = document_page_inventory(
+        config=config,
+        chunks=chunks,
+        page_threshold=page_threshold,
+    )
+    benchmark = run_inventory_group_ingestion_benchmark(
+        config=config,
+        chunks=chunks,
+        inventory=inventory,
+        group_column="page_group",
+        backends=backends,
+        batch_size=batch_size,
+        collection_prefix=collection_prefix,
+        id_prefix_root="pgsize",
+        cleanup=cleanup,
+    )
+    benchmark["parameters"]["page_threshold"] = page_threshold
+    benchmark["page_group_summary"] = benchmark.pop("group_summary")
+    return benchmark
+
+
+def run_page_target_ingestion_benchmark(
+    backends: tuple[str, ...] = ("chroma", "pgvector"),
+    page_targets: tuple[int, ...] = DEFAULT_PAGE_TARGETS,
+    batch_size: int = BATCH_SIZE,
+    collection_prefix: str = "tpi_vectors_page_target_benchmark",
+    cleanup: bool = True,
+) -> dict[str, Any]:
+    """Compare ingestion by assigning each PDF to its nearest page target."""
+    config = resolve_pipeline_config()
+    chunks = load_all_chunks(config.output_dir)
+    inventory = document_page_inventory(
+        config=config,
+        chunks=chunks,
+        page_targets=page_targets,
+    )
+    benchmark = run_inventory_group_ingestion_benchmark(
+        config=config,
+        chunks=chunks,
+        inventory=inventory,
+        group_column="page_target_group",
+        backends=backends,
+        batch_size=batch_size,
+        collection_prefix=collection_prefix,
+        id_prefix_root="target",
+        cleanup=cleanup,
+    )
+    benchmark["parameters"]["page_targets"] = list(page_targets)
+    benchmark["page_target_summary"] = benchmark.pop("group_summary")
+    return benchmark
+
+
+def run_inventory_group_ingestion_benchmark(
+    config: PipelineConfig,
+    chunks: list[dict],
+    inventory: pd.DataFrame,
+    group_column: str,
+    backends: tuple[str, ...],
+    batch_size: int,
+    collection_prefix: str,
+    id_prefix_root: str,
+    cleanup: bool,
+) -> dict[str, Any]:
+    """Compare ingestion throughput for any document-level grouping column."""
+    chunks_by_group = split_chunks_by_inventory_group(chunks, inventory, group_column)
+    model = SentenceTransformer(config.embedding_model)
+
+    ingestion_frames: list[pd.DataFrame] = []
+    batch_frames: list[pd.DataFrame] = []
+    errors: list[dict[str, str]] = []
+
+    group_stats = (
+        inventory.groupby(group_column, as_index=False)
+        .agg(
+            pdf_count=("source_file", "count"),
+            total_pages=("pages", "sum"),
+            mean_pages=("pages", "mean"),
+            mean_target_distance=("page_target_distance", "mean"),
+            chunks=("chunks", "sum"),
+        )
+        .sort_values(group_column)
+    )
+    stats_by_group = {
+        getattr(row, group_column): row._asdict()
+        for row in group_stats.itertuples(index=False)
+    }
+
+    for group_name, group_chunks in chunks_by_group.items():
+        ids, texts, metadatas = build_chunk_records(group_chunks)
+        ids = prefix_chunk_ids(ids, f"{id_prefix_root}__{group_name}__")
+        group_info = stats_by_group[group_name]
+
+        for backend in backends:
+            temp_dir = tempfile.TemporaryDirectory() if backend == "chroma" else None
+            chroma_dir = temp_dir.name if temp_dir else None
+            collection_name = f"{collection_prefix}_{group_name}_{backend}"
+            store: VectorStore | None = None
+            try:
+                store = make_store(
+                    backend=backend,
+                    config=config,
+                    collection_name=collection_name,
+                    chroma_dir=chroma_dir,
+                )
+                store.delete_collection()
+                store = make_store(
+                    backend=backend,
+                    config=config,
+                    collection_name=collection_name,
+                    chroma_dir=chroma_dir,
+                )
+
+                ingestion, batches = benchmark_ingestion(
+                    store=store,
+                    backend=backend,
+                    model=model,
+                    ids=ids,
+                    texts=texts,
+                    metadatas=metadatas,
+                    batch_size=batch_size,
+                )
+                for frame in (ingestion, batches):
+                    frame.insert(0, group_column, group_name)
+                    frame.insert(1, "pdf_count", group_info["pdf_count"])
+                    frame.insert(2, "total_pages", group_info["total_pages"])
+                    frame.insert(3, "mean_pages", group_info["mean_pages"])
+                    frame.insert(
+                        4,
+                        "mean_target_distance",
+                        group_info["mean_target_distance"],
+                    )
+
+                ingestion_frames.append(ingestion)
+                batch_frames.append(batches)
+            except Exception as exc:
+                errors.append(
+                    {
+                        group_column: group_name,
+                        "backend": backend,
+                        "error_type": type(exc).__name__,
+                        "message": str(exc),
+                    }
+                )
+            finally:
+                if store is not None:
+                    try:
+                        store.delete_collection()
+                    except Exception:
+                        pass
+                if temp_dir is not None:
+                    temp_dir.cleanup()
+
+    return {
+        "parameters": {
+            "backends": list(backends),
+            "batch_size": batch_size,
+            "collection_prefix": collection_prefix,
+            "cleanup": cleanup,
+        },
+        "errors": errors,
+        "document_inventory": inventory,
+        "group_summary": group_stats,
+        "ingestion": pd.concat(ingestion_frames, ignore_index=True)
+        if ingestion_frames
+        else pd.DataFrame(),
+        "ingestion_batches": pd.concat(batch_frames, ignore_index=True)
+        if batch_frames
+        else pd.DataFrame(),
+    }
 
 
 def time_query_latency(

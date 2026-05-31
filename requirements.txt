@@ -28,6 +28,7 @@ alembic
 
 # Benchmark/report metrics
 radon
+pypdf
 
 # Tests
 pytest

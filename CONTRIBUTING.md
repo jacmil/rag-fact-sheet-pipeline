@@ -188,7 +188,9 @@ To extend the reference set when adding new companies:
 The benchmarker workflow is notebook-first. Use `benchmark_exploration.ipynb`
 to test ideas and inspect pandas DataFrames. Stable helper functions live in
 `benchmark_metrics.py`, and the notebook imports them.
-Current benchmark notes are summarized in
+The consolidated benchmark tables and recommendation are in
+[docs/evaluation/benchmark_results.md](docs/evaluation/benchmark_results.md).
+Detailed run notes are in
 [docs/evaluation/evaluation_notebook.md](docs/evaluation/evaluation_notebook.md).
 
 Current notebook parameters:
@@ -214,6 +216,27 @@ The notebook covers these comparison tables:
 | Score/ranking parity | Top-k cosine scores and chunk ID order across backends |
 | Deployment complexity | Extra services, Docker Compose line count, and clean-machine setup steps |
 | Code legibility | Line count, import count, and radon complexity for each backend implementation |
+
+For the document-size comparison, use the page inventory and threshold helper:
+
+```python
+from benchmark_metrics import (
+    document_page_inventory,
+    run_page_group_ingestion_benchmark,
+    run_page_target_ingestion_benchmark,
+)
+
+page_inventory = document_page_inventory(page_threshold=60)
+threshold_results = run_page_group_ingestion_benchmark(page_threshold=60)
+target_results = run_page_target_ingestion_benchmark(page_targets=(20, 60))
+```
+
+The threshold helper compares PDFs below 60 pages with PDFs at or above 60
+pages. Report it as a short-vs-long cohort comparison, not as a substitute for a
+single-document 20-page vs 60-page timing unless you run those two documents
+separately. The target helper assigns each PDF to whichever target page count it
+is closest to, such as 20 pages or 60 pages, and then reports ingestion
+throughput for those groups.
 
 Run it after chunks already exist under `data/interim/chunks/`. If they do not,
 run `python pipeline.py extract` first.

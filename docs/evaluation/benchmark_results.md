@@ -1,20 +1,22 @@
-# Evaluation Notebook Notes
+# Benchmark Results
 
-This note records the full local pipeline and benchmark check run on 31 May 2026.
-It summarizes what should be reflected in `benchmark_exploration.ipynb` and in the
-written recommendation.
+This is the main place to read the ChromaDB vs pgvector evaluation results.
+The benchmark code lives in `benchmark_metrics.py`; this file explains the
+outputs in one place.
 
-## Pipeline Status
+## What Counts As A Test
 
-The active `.env` points the pipeline at the company PDF folders:
+There are two different kinds of checks in this project:
 
-```text
-PDF_SOURCE_DIR=data/pdfs
-VECTOR_STORE=chroma
-COLLECTION_NAME=tpi_vectors
-```
+| Check | Command | Purpose |
+|-------|---------|---------|
+| Correctness suite | `python -m pytest` | Confirms both backends obey the same vector-store contract |
+| Benchmark suite | `python benchmark_metrics.py` and notebook helpers | Measures speed, retrieval quality, filtering, deployment, and code complexity |
 
-Current local corpus:
+The pytest output is not the performance evaluation. It is the trust check before
+benchmarking.
+
+## Current Corpus
 
 | Item | Count |
 |------|------:|
@@ -24,31 +26,16 @@ Current local corpus:
 | Reference queries | 20 |
 | Missing reference chunk IDs | 0 |
 
-Both stores currently contain the full corpus:
+Both stores were populated with the full corpus:
 
 | Store | Chunks |
 |-------|------:|
 | ChromaDB | 5,913 |
 | pgvector | 5,913 |
 
-`python pipeline.py extract` completed successfully. All 17 PDFs were already
-extracted and chunked, so the command verified the folder structure and skip
-logic without regenerating files.
+## Retrieval Quality
 
-Retrieval smoke tests succeeded for both backends on the Kraft Heinz query:
-
-```bash
-VECTOR_STORE=chroma python pipeline.py retrieve -q "What are Kraft Heinz's environmental sustainability goals?"
-VECTOR_STORE=pgvector python pipeline.py retrieve -q "What are Kraft Heinz's environmental sustainability goals?"
-```
-
-Generation also ran end to end with ChromaDB. The local generation model repeated
-part of the final answer, so generation output should not be used as the backend
-comparison metric. The backend evaluation should stay focused on retrieval.
-
-## Benchmark Run
-
-Command:
+Full benchmark command:
 
 ```bash
 HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 python benchmark_metrics.py
@@ -63,10 +50,7 @@ Benchmark settings:
 | Top-k | 5 |
 | Query repeats | 3 |
 
-## Retrieval Quality
-
-ChromaDB and pgvector returned the same top-5 chunk order for every reference
-query.
+Retrieval quality:
 
 | Metric | ChromaDB | pgvector |
 |--------|---------:|---------:|
@@ -78,9 +62,9 @@ query.
 Interpretation: retrieval quality is identical in this benchmark. The two
 backends store the same vectors and return the same ranked chunks.
 
-## Query Latency
+## Query Speed
 
-Median and p95 timings from the benchmark:
+Median and p95 query latency:
 
 | Backend | Filter | Runs | Median ms | p95 ms |
 |---------|--------|-----:|----------:|-------:|
@@ -94,24 +78,32 @@ Median and p95 timings from the benchmark:
 | pgvector | year | 60 | 6.84 | 12.12 |
 
 Interpretation: ChromaDB is much faster for unfiltered queries and slightly
-faster for sector and year filters. pgvector is slightly faster for the company
+faster for sector and year filters. pgvector was slightly faster for the company
 filter in this run.
 
-## Ingestion Throughput
+## Full-Corpus Ingestion Speed
 
 | Backend | Chunks | Total embed+store sec | Embed sec | Store sec | Total chunks/sec | Store-only chunks/sec |
 |---------|------:|----------------------:|----------:|----------:|-----------------:|----------------------:|
 | ChromaDB | 5,913 | 38.33 | 33.63 | 4.70 | 154.26 | 1,258.68 |
 | pgvector | 5,913 | 31.94 | 29.35 | 2.59 | 185.12 | 2,281.71 |
 
-Interpretation: pgvector was faster for ingestion in this run, especially for
+Interpretation: pgvector was faster for full-corpus ingestion, especially for
 the store-only portion.
 
-## Document Size Threshold
+## Document Size Benchmark 1: Below 60 vs 60+ Pages
 
-The corpus was also split at a 60-page threshold to compare short-document and
-long-document ingestion. This is a cohort comparison, not the exact single
-20-page vs single 60-page benchmark from the brief.
+This groups PDFs by a 60-page threshold.
+
+Run:
+
+```python
+from benchmark_metrics import run_page_group_ingestion_benchmark
+
+results = run_page_group_ingestion_benchmark(page_threshold=60)
+```
+
+Group summary:
 
 | Page group | PDFs | Total pages | Mean pages | Chunks |
 |------------|----:|------------:|-----------:|------:|
@@ -128,14 +120,23 @@ Ingestion by page group:
 | 60 pages or more | pgvector | 9 | 1,068 | 4,997 | 28.938 | 26.188 | 2.750 | 172.677 | 1,817.117 |
 
 Interpretation: pgvector was faster for ingestion in both page-size groups.
-Because the long group contains many more chunks, normalized rates such as
-chunks/sec are more meaningful than total seconds alone.
+Because the groups contain different numbers of chunks, chunks/sec is more useful
+than total seconds alone.
 
-## Closest 20-Page Or 60-Page Target
+## Document Size Benchmark 2: Closest To 20 Pages vs Closest To 60 Pages
 
-The corpus was also grouped by whichever target page count each PDF is closest
-to: 20 pages or 60 pages. This gives a closer match to the assignment language,
-while still using all available documents rather than picking only two examples.
+This assigns each PDF to whichever target page count it is closer to: 20 pages or
+60 pages.
+
+Run:
+
+```python
+from benchmark_metrics import run_page_target_ingestion_benchmark
+
+results = run_page_target_ingestion_benchmark(page_targets=(20, 60))
+```
+
+Group summary:
 
 | Target group | PDFs | Total pages | Mean pages | Mean distance from target | Chunks |
 |--------------|----:|------------:|-----------:|--------------------------:|------:|
@@ -151,16 +152,21 @@ Ingestion by closest page target:
 | Closest to 60 pages | ChromaDB | 10 | 1,116 | 5,277 | 33.696 | 29.793 | 3.902 | 156.606 | 1,352.224 |
 | Closest to 60 pages | pgvector | 10 | 1,116 | 5,277 | 29.604 | 27.227 | 2.377 | 178.253 | 2,219.571 |
 
-Interpretation: pgvector was faster for ingestion in both target groups. The
-closest-to-60 group contains several much longer reports, including a 336-page
-annual report, so the group is not a pure 60-page-only condition.
+Interpretation: pgvector was faster for ingestion in both closest-target groups.
+The closest-to-60 group includes much longer reports, including one 336-page
+annual report, so describe this as a cohort benchmark rather than a pure
+60-page-only condition.
 
 ## Deployment And Code Complexity
+
+Deployment complexity:
 
 | Backend | Extra services | Compose lines | Clean-machine backend steps |
 |---------|---------------:|--------------:|----------------------------:|
 | ChromaDB | 0 | 0 | 2 |
 | pgvector | 1 | 26 | 5 |
+
+Backend implementation size:
 
 | Backend | File | Lines | Imports | Max radon complexity | Mean radon complexity |
 |---------|------|------:|--------:|---------------------:|----------------------:|
@@ -170,21 +176,47 @@ annual report, so the group is not a pure 60-page-only condition.
 Interpretation: pgvector adds Docker/Postgres setup and a larger implementation.
 ChromaDB is simpler to run on a laptop.
 
-## Current Recommendation
+## Recommendation
 
 For a team of social science researchers running TPI-style retrieval on a
-university laptop, ChromaDB is the better default right now. Accuracy is identical
+university laptop, ChromaDB is the better default. Retrieval quality is identical
 to pgvector, unfiltered retrieval is faster, and setup is simpler.
 
-The answer could change if the project needs stronger relational metadata
-queries, joins with existing structured data, or a production Postgres deployment
-that already exists. pgvector also looks stronger for ingestion throughput in the
-current benchmark, so it is worth revisiting if bulk upload speed becomes the
-main bottleneck.
+pgvector becomes more attractive if the project needs relational joins, stronger
+metadata querying inside Postgres, an existing production Postgres deployment, or
+bulk ingestion speed as the dominant constraint.
 
-## File Notes
+## How To Reproduce
 
-`benchmark_metrics.py` prints the benchmark results but does not automatically
-write `evaluation_results.json`. Only export JSON from the notebook after the
-pandas tables look correct. The current untracked `evaluation_results.json`
-should be treated as a local artifact unless regenerated from the latest run.
+Start pgvector:
+
+```bash
+docker compose up -d
+alembic upgrade head
+```
+
+Run correctness tests:
+
+```bash
+python -m pytest
+```
+
+Run the full backend benchmark:
+
+```bash
+HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 python benchmark_metrics.py
+```
+
+Run the two document-size benchmarks from a notebook or Python shell:
+
+```python
+from benchmark_metrics import (
+    document_page_inventory,
+    run_page_group_ingestion_benchmark,
+    run_page_target_ingestion_benchmark,
+)
+
+page_inventory = document_page_inventory()
+threshold_results = run_page_group_ingestion_benchmark(page_threshold=60)
+target_results = run_page_target_ingestion_benchmark(page_targets=(20, 60))
+```
