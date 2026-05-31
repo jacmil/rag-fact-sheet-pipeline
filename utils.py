@@ -13,6 +13,11 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 DEFAULT_QUERY: str = "What are the emissions targets for this company?"
+CACHE_ENV_DEFAULTS: dict[str, str] = {
+    "XDG_CACHE_HOME": ".cache",
+    "MPLCONFIGDIR": ".cache/matplotlib",
+    "NUMBA_CACHE_DIR": ".cache/numba",
+}
 
 
 @dataclass
@@ -44,6 +49,7 @@ def require_env(name: str) -> str:
 def bootstrap_runtime_env(dotenv_path: str = ".env") -> None:
     """Load `.env` and apply runtime environment defaults safely."""
     load_env_file(dotenv_path)
+    configure_runtime_cache_dirs()
 
     hf_home = os.getenv("HF_HOME", "").strip()
     if hf_home:
@@ -51,6 +57,14 @@ def bootstrap_runtime_env(dotenv_path: str = ".env") -> None:
 
     if os.name == "nt":
         os.environ["KMP_DUPLICATE_LIB_OK"] = os.getenv("KMP_DUPLICATE_LIB_OK", "TRUE")
+
+
+def configure_runtime_cache_dirs() -> None:
+    """Use repo-local cache directories when tools need writable caches."""
+    for name, default in CACHE_ENV_DEFAULTS.items():
+        value = os.getenv(name, "").strip() or default
+        os.environ[name] = value
+        Path(value).mkdir(parents=True, exist_ok=True)
 
 
 def load_env_file(dotenv_path: str = ".env") -> None:

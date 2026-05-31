@@ -5,6 +5,10 @@ import logging
 from pathlib import Path
 from tqdm import tqdm
 
+from utils import configure_runtime_cache_dirs
+
+configure_runtime_cache_dirs()
+
 from unstructured.partition.pdf import partition_pdf
 from utils import resolve_pipeline_config, PipelineConfig, chunk_by_element_type
 

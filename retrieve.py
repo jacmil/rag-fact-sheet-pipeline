@@ -124,7 +124,24 @@ def run_retrieve(
 
     logger.info(f"Query: {query_text}")
     model: SentenceTransformer = SentenceTransformer(config.embedding_model)
-    reranker: CrossEncoder = CrossEncoder(config.reranking_model)
+
+    try:
+        reranker: CrossEncoder = CrossEncoder(config.reranking_model)
+    except Exception as exc:
+        logger.warning(
+            "Reranker unavailable (%s); using bi-encoder ranking instead",
+            exc,
+        )
+        results = retrieve_chunks(
+            query_text,
+            store,
+            model,
+            config,
+            k=RERANK_TOP_K,
+        )
+        for i, r in enumerate(results, start=1):
+            logger.info(f"[{i}] {r.text[:200]}...")
+        return results
 
     # Stage 1: broad retrieval with bi-encoder
     results: list[QueryResult] = retrieve_chunks(query_text, store, model, config, k=BROAD_K)

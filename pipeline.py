@@ -4,7 +4,7 @@ import click
 import logging
 
 from vector_store import get_vector_store, VectorStore, QueryResult
-from utils import resolve_pipeline_config, PipelineConfig
+from utils import bootstrap_runtime_env, resolve_pipeline_config, PipelineConfig
 
 
 def _get_store() -> VectorStore:
@@ -20,6 +20,7 @@ def _get_store() -> VectorStore:
 @click.group()
 def cli() -> None:
     """TPI Carbon Performance RAG pipeline."""
+    bootstrap_runtime_env()
     log_format = "%(asctime)s %(levelname)-8s %(message)s"
     try:
         import coloredlogs
