@@ -33,6 +33,22 @@ Both stores were populated with the full corpus:
 | ChromaDB | 5,913 |
 | pgvector | 5,913 |
 
+## Numerical Summary
+
+| Dimension | Winner | Numerical evidence |
+|-----------|--------|--------------------|
+| Retrieval quality | Tie | Same recall@5, precision@5, MRR, and same top-5 order on 20 / 20 queries |
+| Query latency | ChromaDB | Average median across filter modes: 4.39 ms for ChromaDB vs 8.21 ms for pgvector |
+| Full-corpus ingestion | pgvector | 31.94 sec vs 38.33 sec; 185.12 vs 154.26 chunks/sec |
+| Document-size ingestion | pgvector | Faster in below-60, 60+, closest-to-20, and closest-to-60 page groups |
+| Deployment complexity | ChromaDB | 0 extra services vs 1; 2 setup steps vs 5 |
+| Code legibility | ChromaDB | 110 lines / 5 imports vs 174 lines / 11 imports |
+
+This means the backend choice is not about accuracy in the current pipeline.
+Accuracy tied exactly. The trade-off is speed and setup: ChromaDB is easier and
+faster for common query use, while pgvector is stronger for ingestion and future
+relational database integration.
+
 ## Retrieval Quality
 
 Full benchmark command:
@@ -69,6 +85,9 @@ to `reference_answers.json` by hand. See
 [`reference_answers_review.md`](reference_answers_review.md) for the labelling
 workflow.
 
+Numerical takeaway: backend choice changed none of the retrieval-quality metrics.
+The difference was `0.000` for mean recall@5, precision@5, and MRR.
+
 ## Query Speed
 
 Median and p95 query latency:
@@ -88,6 +107,15 @@ Interpretation: ChromaDB is much faster for unfiltered queries and slightly
 faster for sector and year filters. pgvector was slightly faster for the company
 filter in this run.
 
+Numerical takeaway:
+
+- Unfiltered query median: ChromaDB was about 14.2x faster.
+- Company filter median: pgvector was about 28% faster.
+- Sector filter median: ChromaDB was about 31% faster.
+- Year filter median: ChromaDB was about 15% faster.
+- Average median across all four filter modes: ChromaDB was about 47% lower
+  latency.
+
 ## Full-Corpus Ingestion Speed
 
 | Backend | Chunks | Total embed+store sec | Embed sec | Store sec | Total chunks/sec | Store-only chunks/sec |
@@ -97,6 +125,12 @@ filter in this run.
 
 Interpretation: pgvector was faster for full-corpus ingestion, especially for
 the store-only portion.
+
+Numerical takeaway:
+
+- pgvector was about 16.7% faster by total ingestion seconds.
+- pgvector had about 20.0% higher total chunks/sec.
+- pgvector had about 81.3% higher store-only chunks/sec.
 
 ## Document Size Benchmark 1: Below 60 vs 60+ Pages
 
@@ -164,6 +198,11 @@ The closest-to-60 group includes much longer reports, including one 336-page
 annual report, so describe this as a cohort benchmark rather than a pure
 60-page-only condition.
 
+Numerical takeaway:
+
+- Closest-to-20 group: pgvector had about 46% higher chunks/sec.
+- Closest-to-60 group: pgvector had about 14% higher chunks/sec.
+
 ## Deployment And Code Complexity
 
 Deployment complexity:
@@ -182,6 +221,13 @@ Backend implementation size:
 
 Interpretation: pgvector adds Docker/Postgres setup and a larger implementation.
 ChromaDB is simpler to run on a laptop.
+
+Numerical takeaway:
+
+- pgvector has 2.5x as many clean-machine setup steps.
+- pgvector has about 58% more backend implementation lines.
+- pgvector has about 120% more imports.
+- pgvector's max radon complexity is 50% higher.
 
 ## Recommendation
 
