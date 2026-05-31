@@ -21,6 +21,7 @@ dependencies:
     - tqdm
     - coloredlogs
     - python-dotenv
+    - ipykernel
 
     # PDF extraction
     - "unstructured[pdf]"
@@ -39,3 +40,6 @@ dependencies:
     - pgvector
     - psycopg[binary]
     - alembic
+
+    # Benchmark/report metrics
+    - radon

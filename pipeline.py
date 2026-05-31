@@ -1,12 +1,8 @@
 from __future__ import annotations
 
 import click
-import coloredlogs
+import logging
 
-from extract import run_extract
-from embed import run_embed
-from retrieve import run_retrieve
-from generate import run_generate
 from vector_store import get_vector_store, VectorStore, QueryResult
 from utils import resolve_pipeline_config, PipelineConfig
 
@@ -24,22 +20,32 @@ def _get_store() -> VectorStore:
 @click.group()
 def cli() -> None:
     """TPI Carbon Performance RAG pipeline."""
-    coloredlogs.install(
-        level="INFO",
-        fmt="%(asctime)s %(levelname)-8s %(message)s",
-        datefmt="%H:%M:%S",
-    )
+    log_format = "%(asctime)s %(levelname)-8s %(message)s"
+    try:
+        import coloredlogs
+
+        coloredlogs.install(
+            level="INFO",
+            fmt=log_format,
+            datefmt="%H:%M:%S",
+        )
+    except ImportError:
+        logging.basicConfig(level=logging.INFO, format=log_format, datefmt="%H:%M:%S")
 
 
 @cli.command()
 def extract() -> None:
     """Extract text from PDFs and chunk into segments."""
+    from extract import run_extract
+
     run_extract()
 
 
 @cli.command()
 def embed() -> None:
     """Generate embeddings and store chunks in the vector store."""
+    from embed import run_embed
+
     store: VectorStore = _get_store()
     run_embed(store)
 
@@ -48,6 +54,8 @@ def embed() -> None:
 @click.option("--query", "-q", default=None, help="Question to ask the pipeline")
 def retrieve(query: str | None) -> None:
     """Retrieve relevant chunks for a query."""
+    from retrieve import run_retrieve
+
     store: VectorStore = _get_store()
     results: list[QueryResult] = run_retrieve(query, store)
     for i, r in enumerate(results, start=1):
@@ -58,6 +66,9 @@ def retrieve(query: str | None) -> None:
 @click.option("--query", "-q", default=None, help="Question to ask the pipeline")
 def generate(query: str | None) -> None:
     """Retrieve chunks then generate a cited answer."""
+    from retrieve import run_retrieve
+    from generate import run_generate
+
     store: VectorStore = _get_store()
     # Retrieve → generate handoff: extract text from QueryResults
     results: list[QueryResult] = run_retrieve(query, store)
@@ -75,6 +86,11 @@ def run_all(query: str | None) -> None:
     the retrieve -> generate handoff needs the intermediate QueryResult
     list, which can't pass through Click's command dispatch.
     """
+    from extract import run_extract
+    from embed import run_embed
+    from retrieve import run_retrieve
+    from generate import run_generate
+
     # Stage 1: extract PDFs and chunk (no store needed)
     run_extract()
 

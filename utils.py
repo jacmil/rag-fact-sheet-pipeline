@@ -3,8 +3,12 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-from dotenv import load_dotenv
 from vector_store.types import VectorStore
+
+try:
+    from dotenv import load_dotenv as _load_dotenv
+except ImportError:
+    _load_dotenv = None
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +43,7 @@ def require_env(name: str) -> str:
 
 def bootstrap_runtime_env(dotenv_path: str = ".env") -> None:
     """Load `.env` and apply runtime environment defaults safely."""
-    load_dotenv(dotenv_path=dotenv_path, encoding="utf-8-sig")
+    load_env_file(dotenv_path)
 
     hf_home = os.getenv("HF_HOME", "").strip()
     if hf_home:
@@ -47,6 +51,32 @@ def bootstrap_runtime_env(dotenv_path: str = ".env") -> None:
 
     if os.name == "nt":
         os.environ["KMP_DUPLICATE_LIB_OK"] = os.getenv("KMP_DUPLICATE_LIB_OK", "TRUE")
+
+
+def load_env_file(dotenv_path: str = ".env") -> None:
+    """Load simple KEY=VALUE pairs from .env without requiring python-dotenv."""
+    if _load_dotenv is not None:
+        _load_dotenv(dotenv_path=dotenv_path, encoding="utf-8-sig")
+        return
+
+    path = Path(dotenv_path)
+    if not path.exists():
+        return
+
+    for line in path.read_text(encoding="utf-8-sig").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        if stripped.startswith("export "):
+            stripped = stripped[len("export ") :].strip()
+        if "=" not in stripped:
+            continue
+
+        key, value = stripped.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip("\"'")
+        if key and key not in os.environ:
+            os.environ[key] = value
 
 
 def resolve_pipeline_config() -> PipelineConfig:

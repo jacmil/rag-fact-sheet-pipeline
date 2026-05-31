@@ -5,6 +5,7 @@ coloredlogs
 python-dotenv
 numpy
 pandas
+ipykernel
 
 # PDF extraction
 unstructured[pdf]
@@ -19,9 +20,14 @@ transformers
 # Vector store: ChromaDB backend
 chromadb
 
-# Vector store: pgvector backend (uncomment when using)
-# sqlalchemy>=2.0
-# pgvector
+# Vector store: pgvector backend
+sqlalchemy>=2.0
+pgvector
+psycopg[binary]
+alembic
+
+# Benchmark/report metrics
+radon
 
 # Quantisation (Linux/Nuvolos only, not supported on macOS Apple Silicon)
 # bitsandbytes

@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import os
 import platform
-import coloredlogs
 
 from transformers import pipeline as hf_pipeline, Pipeline
 
@@ -149,11 +148,14 @@ def run_generate(
 
 
 if __name__ == "__main__":
-    coloredlogs.install(
-        level="INFO",
-        fmt="%(asctime)s %(levelname)-8s %(message)s",
-        datefmt="%H:%M:%S",
-    )
+    log_format = "%(asctime)s %(levelname)-8s %(message)s"
+    try:
+        import coloredlogs
+
+        coloredlogs.install(level="INFO", fmt=log_format, datefmt="%H:%M:%S")
+    except ImportError:
+        logging.basicConfig(level=logging.INFO, format=log_format, datefmt="%H:%M:%S")
+
     # Standalone run: retrieve chunks first, then generate
     from vector_store import get_vector_store
     from retrieve import run_retrieve

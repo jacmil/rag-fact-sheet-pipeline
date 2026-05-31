@@ -36,7 +36,7 @@ Metadata is stored as `jsonb`, mapped in SQLAlchemy as `metadata_` (the ORM rese
 
 ### Metadata filtering via SQL WHERE
 
-`PgVectorStore.query()` applies `where={"company": "AGL"}` as JSONB equality filters (`metadata->>'key' = value`) before ordering by cosine distance. ChromaDB post-filters on HNSW; pgvector pre-filters in SQL. The benchmarker should measure both filtered and unfiltered query latency separately.
+`PgVectorStore.query()` applies `where={"company": "AGL"}` as JSONB equality filters (`metadata->>'key' = value`) before ordering by cosine distance. `ChromaStore.query()` passes the same `where` contract to ChromaDB. The benchmark measures both filtered and unfiltered query latency through the shared `VectorStore.query()` interface.
 
 ### Bulk upsert via table insert, not ORM `session.add()`
 
@@ -78,9 +78,54 @@ The `run-all` command calls `run_extract()`, `run_embed()`, `run_retrieve()`, an
 
 ## Evaluation
 
+### Measurement-driven evaluation approach
+
+The benchmark work isolates backend behaviour from unrelated pipeline costs.
+Retrieval metrics use the bi-encoder only, and backend timing wraps direct
+`store.add()` and `store.query()` calls rather than full CLI commands.
+
+Keyword extraction was tested separately by comparing stripped-down query strings
+against the original natural-language questions on the AGL reference set. It did
+not improve mean precision@5, so the keyword rewriting path was removed.
+
+### Notebook-first benchmark implementation
+
+The benchmarker workflow is notebook-first. `benchmark_exploration.ipynb` is the
+scratch surface for running experiments and inspecting pandas DataFrames.
+`benchmark_metrics.py` contains reusable helper functions once a notebook cell
+is stable enough to extract.
+
+The harness creates each backend directly, using a temporary ChromaDB directory
+and a temporary pgvector collection. Benchmark chunk IDs are prefixed with
+`tpi_vectors_benchmark__` so pgvector upserts cannot overwrite production chunk
+IDs. Cleanup deletes the benchmark collections after each run.
+
+The notebook does not write result artifacts automatically. `evaluation_results.json`
+starts as `{}` and should only be written after the notebook output looks right.
+This keeps failed exploratory runs from becoming report evidence by accident.
+
 ### Reference set evaluates bi-encoder only
 
-`reference_answers.json` and `evaluate_retrieval()` bypass the cross-encoder reranking step. For Project D the comparison is between storage backends, not retrieval strategies. The cross-encoder is the same code path regardless of backend, so including it would add noise without helping isolate backend differences. If someone wants end-to-end retrieval quality metrics, they need a separate evaluation that calls `run_retrieve()` from `retrieve.py`.
+`reference_answers.json` and `evaluate_retrieval()` measure retrieval without cross-encoder reranking. The cross-encoder is identical code regardless of backend, so including it would add noise without helping isolate backend differences. When comparing ChromaDB vs pgvector, measure bi-encoder performance. For end-to-end retrieval quality (bi-encoder + cross-encoder), run the full `run_retrieve()` pipeline from `retrieve.py` instead.
+
+**Current baseline (AGL document, bi-encoder, k=5, validated 24 May 2026):**
+
+| Query | recall@5 | precision@5 | MRR |
+|-------|----------|-------------|-----|
+| Emissions targets | 0.25 | 0.2 | 0.5 |
+| Power stations | 1.00 | 0.4 | 0.5 |
+| Renewables investment | 1.00 | 0.4 | 1.0 |
+
+Both ChromaDB and pgvector produce identical results. If changes to retrieval
+strategy, chunking, or embedding model affect these numbers, run the tests again
+to measure impact.
+
+### Retrieval uses natural-language queries
+
+`run_retrieve()` embeds the original user query directly for both the bi-encoder
+retrieval pass and cross-encoder reranking. The keyword extraction experiment did
+not improve precision@5 on the AGL reference set, so the extra query rewriting
+step was removed.
 
 ### Qwen2.5-1.5B-Instruct for generation
 
@@ -104,7 +149,7 @@ Sylvan told us TPI does batch uploads of 2-3k documents about 5-6 times a year. 
 
 ### Benchmark filtered and unfiltered queries separately
 
-TPI filters by metadata (doctype, sector, company) to narrow from potentially 50k chunks to a manageable set. The two backends may handle metadata filtering very differently (ChromaDB's HNSW with post-filter vs pgvector's SQL WHERE with pre-filter via joins). Measuring both gives a more complete picture.
+TPI filters by metadata (doctype, sector, company) to narrow from potentially 50k chunks to a manageable set. The two backends may handle metadata filtering differently internally, even though the pipeline exposes the same `where` interface. Measuring both filtered and unfiltered latency gives a more complete picture.
 
 ## Repository and code structure
 

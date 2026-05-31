@@ -1,6 +1,5 @@
 import json
 import pickle
-import coloredlogs
 import logging
 
 from pathlib import Path
@@ -118,9 +117,12 @@ def log_extraction_summary(company_dirs: dict[str, Path], pdf_glob: str) -> None
 
 
 if __name__ == "__main__":
-    coloredlogs.install(
-        level="INFO",
-        fmt="%(asctime)s %(levelname)-8s %(message)s",
-        datefmt="%H:%M:%S",
-    )
+    log_format = "%(asctime)s %(levelname)-8s %(message)s"
+    try:
+        import coloredlogs
+
+        coloredlogs.install(level="INFO", fmt=log_format, datefmt="%H:%M:%S")
+    except ImportError:
+        logging.basicConfig(level=logging.INFO, format=log_format, datefmt="%H:%M:%S")
+
     run_extract()
