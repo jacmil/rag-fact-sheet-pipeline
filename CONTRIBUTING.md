@@ -191,7 +191,7 @@ to test ideas and inspect pandas DataFrames. Stable helper functions live in
 The consolidated benchmark tables and recommendation are in
 [docs/evaluation/benchmark_results.md](docs/evaluation/benchmark_results.md).
 Detailed run notes are in
-[docs/evaluation/evaluation_notebook.md](docs/evaluation/evaluation_notebook.md).
+[docs/evaluation/evaluation_notebook_doc.md](docs/evaluation/evaluation_notebook_doc.md).
 
 Current notebook parameters:
 

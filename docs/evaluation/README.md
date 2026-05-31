@@ -7,7 +7,7 @@ notebooks currently import them from there.
 | File | Purpose |
 |------|---------|
 | [`benchmark_results.md`](benchmark_results.md) | Main benchmark summary: speed, retrieval quality, ingestion, document-size tests, recommendation |
-| [`evaluation_notebook.md`](evaluation_notebook.md) | Detailed run notes from the latest pipeline smoke test and benchmark |
+| [`evaluation_notebook_doc.md`](evaluation_notebook_doc.md) | Detailed run notes from the latest pipeline smoke test and benchmark |
 | [`reference_answers_review.md`](reference_answers_review.md) | Manual labelling rules and reference set summary |
 
 Root-level evaluation files:
