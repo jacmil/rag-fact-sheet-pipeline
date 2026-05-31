@@ -2,8 +2,9 @@
 
 ## Tracking and planning
 
-- **[PROJECT_BOARD.md](../PROJECT_BOARD.md)** (repo root) — task checklist, deliverables, and design questions for the TPI **document discovery** pipeline (discover → filter → hand-off, GitHub Actions cron).
-- **`DECISIONS.md`** (repo root, create when you start) — sector, companies, search vs crawl vs hybrid, relevance definition, tradeoffs.
+- **[PROJECT_BOARD.md](../PROJECT_BOARD.md)** (repo root) — task checklist and remaining deliverables.
+- **[DECISIONS.md](../DECISIONS.md)** (repo root) — vector store, pipeline, evaluation, and deployment tradeoffs.
+- **[docs/evaluation/](evaluation/)** — benchmark notes, reference set documentation, and labelling rules.
 
 ## AI assistant instructions (per person)
 
@@ -23,4 +24,7 @@ Each teammate should keep a short **AI_INSTRUCTIONS** file so Cursor / Copilot /
 
 ## Note on `docs/josh/RULES.md`
 
-That file was carried from **Problem Set 2** (RAG) conventions. For **this** project, web discovery (Scrapy/Selenium) and scheduled GitHub Actions are **in scope**. Prefer the discovery-specific instructions in [`docs/ai/`](ai/) and your personal [`docs/contributors/`](contributors/) file.
+That file was carried from **Problem Set 2** conventions. For this project, the
+active deliverable is the ChromaDB vs pgvector RAG backend comparison. Prefer the
+project README, CONTRIBUTING guide, DECISIONS file, and evaluation notes for the
+current workflow.

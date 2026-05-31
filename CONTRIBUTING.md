@@ -94,7 +94,23 @@ python pipeline.py generate --query "What are the emissions targets?"
 
 ### Running tests
 
-> **TODO**: Test suite not yet written. Per `HANDOFF.md`, this belongs to the tester deliverable as a parametrised pytest suite that runs against both backends.
+The pytest suite checks the shared vector-store contract against ChromaDB and
+pgvector. It uses a tiny synthetic 384-dimensional dataset, so it does not embed
+PDFs or touch the production `tpi_vectors` collection.
+
+```bash
+python -m pytest
+```
+
+pgvector tests require Docker/Postgres and the Alembic schema:
+
+```bash
+docker compose up -d
+alembic upgrade head
+python -m pytest
+```
+
+If Postgres is not available, pgvector tests skip and ChromaDB tests still run.
 
 ### Reference set and benchmark metrics
 
@@ -106,6 +122,8 @@ uses the original query text.
 `reference_answers.json` contains 20 manually labelled queries. The current local
 set covers 15 companies, 17 PDFs, 3 sectors, and publication years from 2016 to
 2024. The chunk corpus currently has 5,913 chunks under `data/interim/chunks/`.
+See [docs/evaluation/reference_answers_review.md](docs/evaluation/reference_answers_review.md)
+for the labelling rules and current reference set summary.
 
 Reference coverage by sector:
 
@@ -170,6 +188,8 @@ To extend the reference set when adding new companies:
 The benchmarker workflow is notebook-first. Use `benchmark_exploration.ipynb`
 to test ideas and inspect pandas DataFrames. Stable helper functions live in
 `benchmark_metrics.py`, and the notebook imports them.
+Current benchmark notes are summarized in
+[docs/evaluation/evaluation_notebook.md](docs/evaluation/evaluation_notebook.md).
 
 Current notebook parameters:
 

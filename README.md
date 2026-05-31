@@ -19,6 +19,8 @@ Use `benchmark_exploration.ipynb` for the notebook workflow. It imports helper f
 
 The latest full local run used 20 reference queries, `k=5`, and 3 query repeats. ChromaDB and pgvector returned the same top-5 chunk order for all 20 queries. Mean retrieval quality was identical: recall@5 `0.4267`, precision@5 `0.18`, and MRR `0.4125`. On that run, ChromaDB was faster for unfiltered queries, while pgvector had faster store-only ingestion. Re-run the benchmark before reporting final numbers, since timing depends on the machine and current Docker state.
 
+Evaluation notes live in [docs/evaluation/](docs/evaluation/), including the latest benchmark summary and reference labelling rules.
+
 ## How to run
 
 1. Create and activate the conda environment (takes 25-30 minutes, this is normal):

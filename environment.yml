@@ -43,3 +43,6 @@ dependencies:
 
     # Benchmark/report metrics
     - radon
+
+    # Tests
+    - pytest
