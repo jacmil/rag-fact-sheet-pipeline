@@ -84,25 +84,24 @@ Median and p95 timings from the benchmark:
 
 | Backend | Filter | Runs | Median ms | p95 ms |
 |---------|--------|-----:|----------:|-------:|
-| ChromaDB | company | 60 | 5.68 | 6.19 |
-| pgvector | company | 60 | 4.07 | 7.51 |
-| ChromaDB | sector | 60 | 4.99 | 6.35 |
-| pgvector | sector | 60 | 7.20 | 10.14 |
-| ChromaDB | unfiltered | 60 | 1.04 | 1.28 |
-| pgvector | unfiltered | 60 | 14.73 | 18.89 |
-| ChromaDB | year | 60 | 5.83 | 6.14 |
-| pgvector | year | 60 | 6.84 | 12.12 |
+| ChromaDB | company | 60 | 5.14 | 5.71 |
+| pgvector | company | 60 | 6.67 | 9.32 |
+| ChromaDB | sector | 60 | 4.28 | 5.65 |
+| pgvector | sector | 60 | 7.35 | 11.15 |
+| ChromaDB | unfiltered | 60 | 1.01 | 1.32 |
+| pgvector | unfiltered | 60 | 15.58 | 21.23 |
+| ChromaDB | year | 60 | 5.30 | 5.71 |
+| pgvector | year | 60 | 6.26 | 9.42 |
 
-Interpretation: ChromaDB is much faster for unfiltered queries and slightly
-faster for sector and year filters. pgvector is slightly faster for the company
-filter in this run.
+Interpretation: ChromaDB is faster across the measured query modes in this run,
+with the largest gap on unfiltered retrieval.
 
 ## Ingestion Throughput
 
 | Backend | Chunks | Total embed+store sec | Embed sec | Store sec | Total chunks/sec | Store-only chunks/sec |
 |---------|------:|----------------------:|----------:|----------:|-----------------:|----------------------:|
-| ChromaDB | 5,913 | 38.33 | 33.63 | 4.70 | 154.26 | 1,258.68 |
-| pgvector | 5,913 | 31.94 | 29.35 | 2.59 | 185.12 | 2,281.71 |
+| ChromaDB | 5,913 | 37.47 | 33.01 | 4.47 | 157.79 | 1,323.96 |
+| pgvector | 5,913 | 32.86 | 30.05 | 2.82 | 179.93 | 2,099.87 |
 
 Interpretation: pgvector was faster for ingestion in this run, especially for
 the store-only portion.
@@ -174,7 +173,8 @@ ChromaDB is simpler to run on a laptop.
 
 For a team of social science researchers running TPI-style retrieval on a
 university laptop, ChromaDB is the better default right now. Accuracy is identical
-to pgvector, unfiltered retrieval is faster, and setup is simpler.
+to pgvector, query latency is lower in the current benchmark, and setup is
+simpler.
 
 The answer could change if the project needs stronger relational metadata
 queries, joins with existing structured data, or a production Postgres deployment
@@ -186,5 +186,6 @@ main bottleneck.
 
 `benchmark_metrics.py` prints the benchmark results but does not automatically
 write `evaluation_results.json`. Only export JSON from the notebook after the
-pandas tables look correct. The current untracked `evaluation_results.json`
-should be treated as a local artifact unless regenerated from the latest run.
+pandas tables look correct. `evaluation_results.json` is tracked as an empty
+placeholder by default; treat populated benchmark exports as local run artifacts
+unless regenerated from the latest run and intentionally reviewed.

@@ -211,6 +211,7 @@ __marimo__/
 
 condaenv.*
 data/
+tpi_evaluation_data_bundle.zip
 
 ./xet/logs/
 ./REDACTEDQuf/

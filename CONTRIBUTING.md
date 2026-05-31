@@ -303,7 +303,10 @@ The interface accepts numpy arrays for embeddings and returns `list[QueryResult]
 - Configuration via `.env`, never hardcoded paths
 - British spelling in documentation
 
-> **TODO**: Commit message conventions and branch naming to be agreed with the team.
+Commit messages should be short, imperative summaries such as
+`Add pgvector contract tests` or `Update evaluation benchmark notes`. Use a
+separate branch for larger changes when coordinating with teammates, and keep
+generated data out of commits unless the team explicitly decides otherwise.
 
 ## pgvector backend (Docker + Postgres)
 

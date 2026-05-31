@@ -32,6 +32,7 @@ pypdf
 
 # Tests
 pytest
+ruff
 
 # Quantisation (Linux/Nuvolos only, not supported on macOS Apple Silicon)
 # bitsandbytes

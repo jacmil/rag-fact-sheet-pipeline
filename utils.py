@@ -286,9 +286,9 @@ def chunk_by_element_type(
     return emit_chunks_from_sections(sections, char_limit, source_label)
 
 
-#####################################
-# Evalutation for Retrieval Metrics
-#####################################
+####################################
+# Evaluation for Retrieval Metrics
+####################################
 def evaluate_retrieval(
     ground_truth: list[dict],
     store: "VectorStore",
@@ -297,12 +297,11 @@ def evaluate_retrieval(
 ) -> "pd.DataFrame":
     """Run queries against a VectorStore and compute retrieval metrics.
 
-    TODO (benchmarker): extend with per-query latency timing, per-company
-    breakdowns, and any additional metrics needed for the benchmark report.
-    Consider whether DataFrame is the right output format for your harness.
+    This is the lightweight correctness helper. The full benchmark, including
+    latency and grouped ingestion metrics, lives in `benchmark_metrics.py`.
     """
-    import pandas as pd
     import numpy as np
+    import pandas as pd
 
     rows: list[dict] = []
     for entry in ground_truth:

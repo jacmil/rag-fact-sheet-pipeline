@@ -38,8 +38,8 @@ Both stores were populated with the full corpus:
 | Dimension | Winner | Numerical evidence |
 |-----------|--------|--------------------|
 | Retrieval quality | Tie | Same recall@5, precision@5, MRR, and same top-5 order on 20 / 20 queries |
-| Query latency | ChromaDB | Average median across filter modes: 4.39 ms for ChromaDB vs 8.21 ms for pgvector |
-| Full-corpus ingestion | pgvector | 31.94 sec vs 38.33 sec; 185.12 vs 154.26 chunks/sec |
+| Query latency | ChromaDB | Average median across filter modes: 3.93 ms for ChromaDB vs 8.97 ms for pgvector |
+| Full-corpus ingestion | pgvector | 32.86 sec vs 37.47 sec; 179.93 vs 157.79 chunks/sec |
 | Document-size ingestion | pgvector | Faster in below-60, 60+, closest-to-20, and closest-to-60 page groups |
 | Deployment complexity | ChromaDB | 0 extra services vs 1; 2 setup steps vs 5 |
 | Code legibility | ChromaDB | 110 lines / 5 imports vs 174 lines / 11 imports |
@@ -94,43 +94,42 @@ Median and p95 query latency:
 
 | Backend | Filter | Runs | Median ms | p95 ms |
 |---------|--------|-----:|----------:|-------:|
-| ChromaDB | company | 60 | 5.68 | 6.19 |
-| pgvector | company | 60 | 4.07 | 7.51 |
-| ChromaDB | sector | 60 | 4.99 | 6.35 |
-| pgvector | sector | 60 | 7.20 | 10.14 |
-| ChromaDB | unfiltered | 60 | 1.04 | 1.28 |
-| pgvector | unfiltered | 60 | 14.73 | 18.89 |
-| ChromaDB | year | 60 | 5.83 | 6.14 |
-| pgvector | year | 60 | 6.84 | 12.12 |
+| ChromaDB | company | 60 | 5.14 | 5.71 |
+| pgvector | company | 60 | 6.67 | 9.32 |
+| ChromaDB | sector | 60 | 4.28 | 5.65 |
+| pgvector | sector | 60 | 7.35 | 11.15 |
+| ChromaDB | unfiltered | 60 | 1.01 | 1.32 |
+| pgvector | unfiltered | 60 | 15.58 | 21.23 |
+| ChromaDB | year | 60 | 5.30 | 5.71 |
+| pgvector | year | 60 | 6.26 | 9.42 |
 
-Interpretation: ChromaDB is much faster for unfiltered queries and slightly
-faster for sector and year filters. pgvector was slightly faster for the company
-filter in this run.
+Interpretation: ChromaDB is faster across the measured query modes in this run,
+with the largest gap on unfiltered retrieval.
 
 Numerical takeaway:
 
-- Unfiltered query median: ChromaDB was about 14.2x faster.
-- Company filter median: pgvector was about 28% faster.
-- Sector filter median: ChromaDB was about 31% faster.
-- Year filter median: ChromaDB was about 15% faster.
-- Average median across all four filter modes: ChromaDB was about 47% lower
+- Unfiltered query median: ChromaDB was about 15.4x faster.
+- Company filter median: ChromaDB was about 23% lower latency.
+- Sector filter median: ChromaDB was about 42% lower latency.
+- Year filter median: ChromaDB was about 15% lower latency.
+- Average median across all four filter modes: ChromaDB was about 56% lower
   latency.
 
 ## Full-Corpus Ingestion Speed
 
 | Backend | Chunks | Total embed+store sec | Embed sec | Store sec | Total chunks/sec | Store-only chunks/sec |
 |---------|------:|----------------------:|----------:|----------:|-----------------:|----------------------:|
-| ChromaDB | 5,913 | 38.33 | 33.63 | 4.70 | 154.26 | 1,258.68 |
-| pgvector | 5,913 | 31.94 | 29.35 | 2.59 | 185.12 | 2,281.71 |
+| ChromaDB | 5,913 | 37.47 | 33.01 | 4.47 | 157.79 | 1,323.96 |
+| pgvector | 5,913 | 32.86 | 30.05 | 2.82 | 179.93 | 2,099.87 |
 
 Interpretation: pgvector was faster for full-corpus ingestion, especially for
 the store-only portion.
 
 Numerical takeaway:
 
-- pgvector was about 16.7% faster by total ingestion seconds.
-- pgvector had about 20.0% higher total chunks/sec.
-- pgvector had about 81.3% higher store-only chunks/sec.
+- pgvector was about 12.3% faster by total ingestion seconds.
+- pgvector had about 14.0% higher total chunks/sec.
+- pgvector had about 58.6% higher store-only chunks/sec.
 
 ## Document Size Benchmark 1: Below 60 vs 60+ Pages
 
@@ -233,7 +232,8 @@ Numerical takeaway:
 
 For a team of social science researchers running TPI-style retrieval on a
 university laptop, ChromaDB is the better default. Retrieval quality is identical
-to pgvector, unfiltered retrieval is faster, and setup is simpler.
+to pgvector, query latency is lower in the current benchmark, and setup is
+simpler.
 
 pgvector becomes more attractive if the project needs relational joins, stronger
 metadata querying inside Postgres, an existing production Postgres deployment, or

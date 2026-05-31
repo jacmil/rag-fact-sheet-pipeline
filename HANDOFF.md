@@ -67,7 +67,8 @@ docs/evaluation/evaluation_notebook_doc.md
     queries.
   - Mean recall@5, precision@5, and MRR were identical.
 
-- ChromaDB is faster for unfiltered query latency.
+- ChromaDB is faster for the measured query-latency modes in the latest run,
+  especially unfiltered retrieval.
   - This supports ChromaDB as the easier laptop default.
 
 - pgvector is faster for ingestion.
@@ -94,7 +95,7 @@ Recommend ChromaDB as the default for social science researchers running
 TPI-style retrieval on a university laptop.
 
 Reason: retrieval quality is identical, ChromaDB is much simpler to set up, and
-unfiltered query latency is much faster.
+query latency is lower in the current benchmark.
 
 Say pgvector should be reconsidered if the team needs:
 

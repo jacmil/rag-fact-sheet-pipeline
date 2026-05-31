@@ -25,4 +25,4 @@ Merge in as work is assigned:
 
 ## Additional context
 
-- Personal coding preferences: see [`RULES.md`](RULES.md) for general DS205 style (type hints, clarity, incremental commits) — **override** where it conflicts with discovery (e.g. crawlers allowed here).
+- Personal coding preferences: see [`RULES.md`](../../josh/RULES.md) for general DS205 style (type hints, clarity, incremental commits) — **override** where it conflicts with discovery (e.g. crawlers allowed here).
