@@ -13,7 +13,7 @@ retrieve.py   Two-stage retrieval: bi-encoder broad pass, cross-encoder rerank
 generate.py   Prompt construction and text generation with HuggingFace
 ```
 
-Data flows linearly: PDFs → `.pkl` element caches → `.jsonl` chunks → vector store → `list[QueryResult]` → cited answer string.
+Data flows linearly: PDFs -> `.pkl` element caches -> `.jsonl` chunks -> vector store -> `list[QueryResult]` -> cited answer string.
 
 `embed.py` and `retrieve.py` depend on the `vector_store/` package. `extract.py` and `generate.py` do not touch the vector store directly. Shared configuration and chunking logic live in `utils.py`.
 
@@ -33,6 +33,7 @@ vector_store/
 ## Known bugs and areas for improvement
 
 - `bitsandbytes` does not work on macOS Apple Silicon. Generation runs without quantisation on Mac.
+- The current local cross-encoder can return non-finite scores. `retrieve.py` falls back to the bi-encoder order in that case. Backend benchmarking uses bi-encoder retrieval only, so this does not affect the ChromaDB vs pgvector comparison.
 
 ## Setting up the development environment
 
@@ -70,7 +71,7 @@ Required `.env` variables:
 |----------|-------------|
 | `VECTOR_STORE` | `chroma` or `pgvector` |
 | `CHROMA_DIR` | Path to ChromaDB storage directory |
-| `PG_CONNECTION_STRING` | Postgres URL when `VECTOR_STORE=pgvector` (use `postgresql+psycopg://…`) |
+| `PG_CONNECTION_STRING` | Postgres URL when `VECTOR_STORE=pgvector` (use `postgresql+psycopg://...`) |
 | `DATABASE_URL` | Same Postgres URL for Alembic migrations |
 | `PDF_SOURCE_DIR` | Parent directory containing one subfolder per company |
 | `COLLECTION_NAME` | Collection name for the vector store |
@@ -93,18 +94,36 @@ python pipeline.py generate --query "What are the emissions targets?"
 
 ### Running tests
 
-> **TODO**: Test suite not yet written. Will be added by the benchmarking teammate as a parametrised pytest suite that runs against both backends.
+> **TODO**: Test suite not yet written. Per `HANDOFF.md`, this belongs to the tester deliverable as a parametrised pytest suite that runs against both backends.
 
-### Running the reference answer evaluation
+### Reference set and benchmark metrics
 
-`reference_answers.json` contains queries with manually verified chunk IDs from the AGL test document. To run bi-encoder retrieval evaluation against it:
+Keyword extraction was tested against natural-language queries on the AGL
+reference set. It produced the same mean precision@5 as natural-language
+retrieval, so the keyword rewriting path was removed and production retrieval
+uses the original query text.
+
+`reference_answers.json` contains 20 manually labelled queries. The current local
+set covers 15 companies, 17 PDFs, 3 sectors, and publication years from 2016 to
+2024. The chunk corpus currently has 5,913 chunks under `data/interim/chunks/`.
+
+Reference coverage by sector:
+
+| Sector | Reference queries |
+|--------|------------------:|
+| Energy Utilities | 8 |
+| Diversified Mining | 8 |
+| Food | 4 |
+
+The reference labels are used for backend comparison, not generation quality.
+They measure bi-encoder top-k retrieval before cross-encoder reranking.
 
 ```bash
-python -c "
+HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 python -c "
 import json
 from sentence_transformers import SentenceTransformer
 from vector_store import get_vector_store
-from utils import resolve_pipeline_config, PipelineConfig, evaluate_retrieval
+from utils import resolve_pipeline_config, evaluate_retrieval
 
 config = resolve_pipeline_config()
 store = get_vector_store(config.collection_name)
@@ -118,25 +137,94 @@ print(df.to_string(index=False))
 "
 ```
 
-This evaluates bi-encoder retrieval only (no cross-encoder reranking). The reference set is designed for backend equivalence testing: run the same script with `VECTOR_STORE=chroma` and `VECTOR_STORE=pgvector` and compare numbers.
+The benchmark notebook and script add timing, filter, ranking, and code
+legibility tables on top of this basic retrieval evaluation.
 
-**pgvector baseline (AGL document, bi-encoder, k=5):**
+Latest full local benchmark run:
 
-| Query | recall@5 |
-|-------|----------|
-| Emissions targets | 0.25 |
-| Power stations | 1.00 |
-| Renewables investment | 1.00 |
+| Metric | ChromaDB | pgvector |
+|--------|---------:|---------:|
+| Mean recall@5 | 0.4267 | 0.4267 |
+| Mean precision@5 | 0.18 | 0.18 |
+| Mean MRR | 0.4125 | 0.4125 |
+| Same top-5 order | 20 / 20 | 20 / 20 |
 
-pgvector must match these ChromaDB numbers. If they diverge, check upsert logic and cosine score conversion in `vector_store/pgvector.py`.
+Timing is machine-dependent. Use the notebook or `benchmark_metrics.py` for
+fresh numbers before writing the final report.
+
+To extend the reference set when adding new companies:
+1. Read the PDF for a new query
+2. Manually identify which chunks contain the correct answer
+3. Note the chunk IDs
+4. Add entry to `reference_answers.json`:
+   ```json
+   {
+     "query": "Your question here",
+     "relevant_ids": ["chunk_id_1", "chunk_id_2", ...]
+   }
+   ```
+5. Re-run `evaluate_retrieval()` to measure impact of any pipeline changes
+
+### Backend benchmark notebook
+
+The benchmarker workflow is notebook-first. Use `benchmark_exploration.ipynb`
+to test ideas and inspect pandas DataFrames. Stable helper functions live in
+`benchmark_metrics.py`, and the notebook imports them.
+
+Current notebook parameters:
+
+| Parameter | Value |
+|-----------|-------|
+| Backends | `("chroma", "pgvector")` |
+| Batch size | 256 |
+| Query repeats | 3 |
+| k | 5 |
+| Max chunks | `None` |
+| Max queries | `None` |
+
+The notebook covers these comparison tables:
+
+| Metric | How it is measured |
+|--------|--------------------|
+| Ingestion throughput | Time to embed chunks plus store them, with `store.add()` time also separated |
+| Query latency | Time spent inside `store.query()` for each query/repeat |
+| Filter overhead | Same query timing with company, year, and sector filters when metadata exists |
+| Recall@5 | Top-k results scored against `reference_answers.json` |
+| MRR | First relevant result rank from the top-k table |
+| Score/ranking parity | Top-k cosine scores and chunk ID order across backends |
+| Deployment complexity | Extra services, Docker Compose line count, and clean-machine setup steps |
+| Code legibility | Line count, import count, and radon complexity for each backend implementation |
+
+Run it after chunks already exist under `data/interim/chunks/`. If they do not,
+run `python pipeline.py extract` first.
+
+```bash
+docker compose up -d
+alembic upgrade head
+python scripts/check_pgvector.py
+python benchmark_metrics.py
+```
+
+Or open `benchmark_exploration.ipynb` and run the cells. The notebook uses
+temporary benchmark collections and cleans them up after each run.
+`evaluation_results.json` is intentionally empty by default; only write it after
+the notebook output looks right by running:
+
+```python
+write_results_json(results, "evaluation_results.json")
+```
+
+`benchmark_metrics.py` can also be run directly. It prints a compact console
+report and does not write JSON by default.
 
 ### Data directories
 
 `data/` is in `.gitignore`. The pipeline creates:
 
-- `data/interim/raw/` — pickle caches of extracted PDF elements
-- `data/interim/chunks/` — JSONL chunk files
-- `data/chromadb/` — ChromaDB persistent storage
+- `data/interim/raw/` - pickle caches of extracted PDF elements
+- `data/interim/chunks/` - JSONL chunk files
+- `data/chromadb/` - ChromaDB persistent storage
+- Postgres data lives in the Docker volume `pgvector_data` when using pgvector
 
 All reproducible from source PDFs by re-running the pipeline.
 
@@ -183,7 +271,7 @@ Use this when `VECTOR_STORE=pgvector`. ChromaDB (`VECTOR_STORE=chroma`) does not
 - [Docker Desktop](https://docs.docker.com/desktop/) installed and running
 - conda env `project-d` (includes `sqlalchemy`, `pgvector`, `psycopg`, `alembic`)
 
-### Step 1 — Configure `.env`
+### Step 1 - Configure `.env`
 
 ```bash
 cp .env.example .env
@@ -200,7 +288,7 @@ PDF_SOURCE_DIR=data/pdfs
 
 `POSTGRES_*` variables must match `docker-compose.yml` credentials.
 
-### Step 2 — Start Postgres
+### Step 2 - Start Postgres
 
 ```bash
 docker compose up -d
@@ -209,7 +297,7 @@ docker compose ps    # wait until STATUS is "healthy"
 
 Image: `pgvector/pgvector:0.7.1-pg16` (same family as the CLEAR reference repo).
 
-### Step 3 — Run migrations
+### Step 3 - Run migrations
 
 From the repo root with `project-d` active:
 
@@ -219,7 +307,7 @@ alembic upgrade head
 
 Creates `chunk_records` with `embedding vector(384)`, `collection_name`, and `metadata jsonb`.
 
-### Step 4 — Smoke test
+### Step 4 - Smoke test
 
 ```bash
 python scripts/check_pgvector.py
@@ -227,7 +315,7 @@ python scripts/check_pgvector.py
 
 Expected final line: `Smoke test passed.`
 
-### Step 5 — Run the pipeline on pgvector
+### Step 5 - Run the pipeline on pgvector
 
 ```bash
 python pipeline.py extract
@@ -245,7 +333,7 @@ Re-running `embed` is safe: `pgvector.py` uses upsert (`ON CONFLICT DO UPDATE`).
 |---------|-----|
 | `port is already allocated` | Change `POSTGRES_PORT` in `.env` and both connection strings |
 | `PG_CONNECTION_STRING must be set` | Add it to `.env` when using pgvector |
-| `ModuleNotFoundError: psycopg2` | Use `postgresql+psycopg://…` (psycopg v3), not bare `postgresql://` |
+| `ModuleNotFoundError: psycopg2` | Use `postgresql+psycopg://...` (psycopg v3), not bare `postgresql://` |
 | Container not healthy | `docker compose logs postgres`; wait 10–20s on first start |
 | Reset database completely | `docker compose down -v` then repeat Steps 2–4 |
 
@@ -257,7 +345,7 @@ chunk_records
   content         text
   embedding       vector(384)
   collection_name varchar(128)
-  metadata        jsonb   — keys: company, source_file, strategy, pages
+  metadata        jsonb   - keys: company, source_file, strategy, pages, year, sector
 ```
 
 See `docs/` and `PROJECT_BOARD.md` for project-specific notes and AI assistant setup.

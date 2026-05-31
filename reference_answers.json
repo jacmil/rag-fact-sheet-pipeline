@@ -21,5 +21,130 @@
       "AGL_Carbon_Constrained_Future_elem_0024",
       "AGL_Carbon_Constrained_Future_elem_0067"
     ]
+  },
+  {
+    "query": "How much electricity and natural gas did Alliant Energy's energy efficiency programs save in 2017?",
+    "relevant_ids": [
+        "Alliant_3-Alliant-Energy-Sustainability-Performance-Data-v08-02-2018_elem_0024",
+        "Alliant_3-Alliant-Energy-Sustainability-Performance-Data-v08-02-2018_elem_0025"
+      ]
+  },
+  {
+    "query": "What are Alliant Energy's Clean Energy Vision goals?",
+    "relevant_ids": [
+      "Alliant_CDP_2022_elem_0204",
+      "Alliant_CDP_2022_elem_0210",
+      "Alliant_CDP_2022_elem_0332"
+    ]
+  },
+  {
+    "query": "How has Capital Power's transition toward a lower-emitting and renewable energy portfolio contributed to its strategic advantage?",
+    "relevant_ids": [
+      "Capital_Power_CDP2017_elem_0022",
+      "Capital_Power_CDP2017_elem_0023",
+      "Capital_Power_CDP2017_elem_0024"
+    ]
+  },
+  {
+    "query": "What are CenterPoint Energy's Scope 1 and Scope 2 greenhouse gas emissions goals?",
+    "relevant_ids": [
+      "Center_Point_Energy_Transition_Goals_-_CenterPoint_Energy_Sustainability_elem_0000",
+      "Center_Point_Energy_Transition_Goals_-_CenterPoint_Energy_Sustainability_elem_0001",
+      "Center_Point_Energy_Transition_Goals_-_CenterPoint_Energy_Sustainability_elem_0005"
+    ]
+  },
+  {
+    "query": "What are Chubu Electric Power Group's 2050 zero-emissions goals and supporting decarbonization actions?",
+    "relevant_ids": [
+      "Chubu_Zero_Emissions_Challenge_(March_2021)_elem_0000",
+      "Chubu_Zero_Emissions_Challenge_(March_2021)_elem_0005",
+      "Chubu_Zero_Emissions_Challenge_(March_2021)_elem_0006"
+    ]
+  },
+  {
+    "query": "What are BHP's Scope 1, Scope 2, and Scope 3 emissions reduction targets for 2030?",
+    "relevant_ids": [
+      "BHP_200910_BHPClimateChangeReport_2020_elem_0168",
+      "BHP_200910_BHPClimateChangeReport_2020_elem_0169",
+      "BHP_200910_BHPClimateChangeReport_2020_elem_0170",
+      "BHP_200910_BHPClimateChangeReport_2020_elem_0173",
+      "BHP_200910_BHPClimateChangeReport_2020_elem_0177"
+    ]
+  },
+  {
+  "query": "What are Freeport-McMoRan's four 2030 Scope 1 and Scope 2 GHG emissions reduction targets?",
+  "relevant_ids": [
+    "Freeport_2022_Climate-Report_elem_0055"
+  ]
+  },
+  {
+  "query": "What are Glencore's Scope 1, 2, and 3 emissions reduction targets?",
+  "relevant_ids": [
+    "Glencore_2022-Climate-Report_elem_0034"
+  ]
+  },
+  {
+  "query": "How does Rio Tinto calculate Scope 3 emissions from processing copper concentrate?",
+  "relevant_ids": [
+    "Rio_Tinto_2024-climate-scope-123-report-addendum_elem_0065",
+    "Rio_Tinto_2024-climate-scope-123-report-addendum_elem_0071"
+  ]
+  },
+  {
+  "query": "What iron ore portfolio risks and opportunities does Rio Tinto identify in the low-carbon transition?",
+  "relevant_ids": [
+    "Rio_Tinto_2024-annual-report_elem_0300",
+    "Rio_Tinto_2024-annual-report_elem_0301"
+  ]
+  },
+  {
+  "query": "How does Rio Tinto define Scope 1, Scope 2, and Scope 3 emissions?",
+  "relevant_ids": [
+    "Rio_Tinto_2024-climate-scope-123-report-addendum_elem_0007"
+  ]
+  },
+  {
+  "query": "What are Vale's Scope 1, Scope 2, Scope 3, and renewable energy climate targets?",
+  "relevant_ids": [
+    "Vale_Integrated_Report_Vale_2024_elem_0030",
+    "Vale_Integrated_Report_Vale_2024_elem_0231",
+    "Vale_Integrated_Report_Vale_2024_elem_0232",
+    "Vale_Integrated_Report_Vale_2024_elem_0233"
+  ]
+  },
+  {
+  "query": "What are the FY 2025 targets for the Vedanta Zinc International (VZI) Renewable Energy Project at Gamsberg?",
+  "relevant_ids": [
+    "Vedanta_Sustainability-Report-FY2024_elem_0316",
+    "Vedanta_Sustainability-Report-FY2024_elem_0317",
+    "Vedanta_Sustainability-Report-FY2024_elem_0318"
+  ]
+  },
+  {
+  "query": "What are Danone's SBTi emissions reduction targets for Scope 1, Scope 2, and Scope 3?",
+  "relevant_ids": [
+    "Danone_2023_Danone_SBTi_Target_elem_0010"
+  ]
+  },
+  {
+  "query": "What are Hershey's priority cocoa and environmental goals?",
+  "relevant_ids": [
+    "Hershey_Company_ESG_Report_2021_elem_0025",
+    "Hershey_Company_ESG_Report_2021_elem_0026",
+    "Hershey_Company_ESG_Report_2021_elem_0028"
+  ]
+  },
+  {
+  "query": "How did Orkla define short, medium, and long-term time horizons for climate risks and targets in 2024?",
+  "relevant_ids": [
+    "Orkla_CDP_2023_elem_0020"
+  ]
+  },
+  {
+  "query": "What were Kraft Heinz's environmental sustainability goals in 2024?",
+  "relevant_ids": [
+    "Kraft_Heinz_ESG_Report_2024_elem_0136"
+  ]
   }
+
 ]

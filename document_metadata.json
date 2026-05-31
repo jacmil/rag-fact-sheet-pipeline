@@ -1,0 +1,115 @@
+{
+  "AGL": {
+    "sector": "Energy Utilities"
+  },
+  "AGL|Carbon Constrained Future": {
+    "year": "2016",
+    "sector": "Energy Utilities"
+  },
+  "Alliant": {
+    "sector": "Energy Utilities"
+  },
+  "Alliant|3-Alliant-Energy-Sustainability-Performance-Data-v08-02-2018": {
+    "year": "2018",
+    "sector": "Energy Utilities"
+  },
+  "Alliant|CDP 2022": {
+    "year": "2022",
+    "sector": "Energy Utilities"
+  },
+  "Capital Power": {
+    "sector": "Energy Utilities"
+  },
+  "Capital Power|CDP2017": {
+    "year": "2017",
+    "sector": "Energy Utilities"
+  },
+  "Center Point": {
+    "sector": "Energy Utilities"
+  },
+  "Center Point|Energy Transition Goals - CenterPoint Energy Sustainability": {
+    "year": "2024",
+    "sector": "Energy Utilities"
+  },
+  "Chubu": {
+    "sector": "Energy Utilities"
+  },
+  "Chubu|Zero Emissions Challenge (March 2021)": {
+    "year": "2021",
+    "sector": "Energy Utilities"
+  },
+  "BHP": {
+    "sector": "Diversified Mining"
+  },
+  "BHP|200910_BHPClimateChangeReport 2020": {
+    "year": "2020",
+    "sector": "Diversified Mining"
+  },
+  "Freeport": {
+    "sector": "Diversified Mining"
+  },
+  "Freeport|2022 Climate-Report": {
+    "year": "2022",
+    "sector": "Diversified Mining"
+  },
+  "Glencore": {
+    "sector": "Diversified Mining"
+  },
+  "Glencore|2022-Climate-Report": {
+    "year": "2022",
+    "sector": "Diversified Mining"
+  },
+  "Rio Tinto": {
+    "sector": "Diversified Mining"
+  },
+  "Rio Tinto|2024-climate-scope-123-report-addendum": {
+    "year": "2024",
+    "sector": "Diversified Mining"
+  },
+  "Rio Tinto|2024-annual-report": {
+    "year": "2024",
+    "sector": "Diversified Mining"
+  },
+  "Vale": {
+    "sector": "Diversified Mining"
+  },
+  "Vale|Integrated Report Vale 2024": {
+    "year": "2024",
+    "sector": "Diversified Mining"
+  },
+  "Vedanta": {
+    "sector": "Diversified Mining"
+  },
+  "Vedanta|Sustainability-Report-FY2024": {
+    "year": "2024",
+    "sector": "Diversified Mining"
+  },
+  "Danone": {
+    "sector": "Food"
+  },
+  "Danone|2023 Danone SBTi Target": {
+    "year": "2023",
+    "sector": "Food"
+  },
+  "Hershey Company": {
+    "sector": "Food"
+  },
+  "Hershey Company|ESG Report 2021": {
+    "year": "2021",
+    "sector": "Food"
+  },
+  "Kraft Heinz": {
+    "sector": "Food"
+  },
+  "Kraft Heinz|ESG Report 2024": {
+    "year": "2024",
+    "sector": "Food"
+  },
+  "Orkla": {
+    "sector": "Food"
+  },
+  "Orkla|CDP 2023": {
+    "year": "2023",
+    "sector": "Food"
+  }
+}

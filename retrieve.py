@@ -3,8 +3,6 @@ from __future__ import annotations
 import logging
 import os
 
-import coloredlogs
-
 import numpy as np
 from sentence_transformers import SentenceTransformer, CrossEncoder
 
@@ -81,6 +79,15 @@ def rerank_chunks(
     # Cross-encoder expects list of (query, document) pairs
     pairs: list[tuple[str, str]] = [(query_text, r.text) for r in results]
     scores: np.ndarray = reranker.predict(pairs)
+    finite_scores = np.isfinite(scores)
+
+    if not finite_scores.any():
+        logger.warning(
+            "Reranker returned no finite scores; using bi-encoder ranking instead"
+        )
+        return results[:top_k]
+
+    scores = np.where(finite_scores, scores, -np.inf)
 
     # Sort by cross-encoder score descending, keep top_k
     ranked: list[tuple[float, QueryResult]] = sorted(
@@ -131,9 +138,12 @@ def run_retrieve(
 
 
 if __name__ == "__main__":
-    coloredlogs.install(
-        level="INFO",
-        fmt="%(asctime)s %(levelname)-8s %(message)s",
-        datefmt="%H:%M:%S",
-    )
+    log_format = "%(asctime)s %(levelname)-8s %(message)s"
+    try:
+        import coloredlogs
+
+        coloredlogs.install(level="INFO", fmt=log_format, datefmt="%H:%M:%S")
+    except ImportError:
+        logging.basicConfig(level=logging.INFO, format=log_format, datefmt="%H:%M:%S")
+
     run_retrieve()
