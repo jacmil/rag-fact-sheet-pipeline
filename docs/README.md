@@ -1,30 +1,31 @@
 # Project documentation
 
-## Tracking and planning
+## Core docs (repo root)
 
-- **[PROJECT_BOARD.md](../PROJECT_BOARD.md)** (repo root) — task checklist and remaining deliverables.
-- **[DECISIONS.md](../DECISIONS.md)** (repo root) — vector store, pipeline, evaluation, and deployment tradeoffs.
-- **[docs/evaluation/](evaluation/)** — benchmark notes, reference set documentation, and labelling rules.
+- **[README.md](../README.md)** — overview, quick start, configuration
+- **[CONTRIBUTING.md](../CONTRIBUTING.md)** — developer setup, pipeline internals, pgvector Docker guide
+- **[DECISIONS.md](../DECISIONS.md)** — vector store, pipeline, evaluation, and deployment tradeoffs
 
-## AI assistant instructions (per person)
+## Report and handoff
 
-Each teammate should keep a short **AI_INSTRUCTIONS** file so Cursor / Copilot / other tools stay aligned with this repo and DS205 expectations.
+- **[Report/DS205 Final TPI Recommendation Report.pdf](../Report/DS205%20Final%20TPI%20Recommendation%20Report.pdf)** — final team recommendation (ChromaDB vs pgvector)
+- **[docs/handoff/HANDOFF.md](handoff/HANDOFF.md)** — transparent communication between teammates and AI agents of what is build already and what needs to be done next
 
-| Location | Purpose |
-|----------|---------|
-| [`docs/ai/README.md`](ai/README.md) | How to use the role briefs below |
-| [`docs/ai/`](ai/) | **Role briefs** — copy relevant bullets into your personal file |
-| [`docs/contributors/`](contributors/) | **Per-person folders** — `docs/contributors/<name>/AI_INSTRUCTIONS.md` |
+## Transcripts
 
-### Quick start
+Meeting notes used for project scoping and benchmark priorities:
 
-1. Create `docs/contributors/<your-github-username>/AI_INSTRUCTIONS.md` (see [`contributors/_TEMPLATE_AI_INSTRUCTIONS.md`](contributors/_TEMPLATE_AI_INSTRUCTIONS.md)).
-2. Copy sections from the **role** file(s) you own from [`docs/ai/`](ai/).
-3. In Cursor: **Settings → Rules** for this project, or add `@docs/contributors/<you>/AI_INSTRUCTIONS.md` when prompting.
+- **[docs/transcripts/Meeting Sylvan.docx](transcripts/Meeting%20Sylvan.docx)** — call with Sylvan (TPI) on ingestion throughput, query patterns, and deployment context (19 May 2026)
 
-## Note on `docs/josh/RULES.md`
+## Evaluation
 
-That file was carried from **Problem Set 2** conventions. For this project, the
-active deliverable is the ChromaDB vs pgvector RAG backend comparison. Prefer the
-project README, CONTRIBUTING guide, DECISIONS file, and evaluation notes for the
-current workflow.
+- **[docs/evaluation/](evaluation/)** — benchmark notes, reference set documentation, and labelling rules
+- Start with **[benchmark_results.md](evaluation/benchmark_results.md)** for consolidated tables and the recommendation
+
+## AI assistant / coding rules
+
+Personal Cursor / Copilot guidance for this repo:
+
+- **[docs/agent/RULES.md](agent/RULES.md)** — DS205 coding conventions and project constraints
+
+In Cursor: **Settings → Rules** for this project, or reference `@docs/agent/RULES.md` when prompting.

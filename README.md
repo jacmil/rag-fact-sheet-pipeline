@@ -3,9 +3,9 @@
 
 RAG pipeline for TPI Centre Carbon Performance data, built to compare ChromaDB and pgvector as vector store backends.
 
-**Project tracking:** see [PROJECT_BOARD.md](PROJECT_BOARD.md) for tasks, deliverables, and design questions.
+**Evaluation and recommendation:** see [docs/evaluation/benchmark_results.md](docs/evaluation/benchmark_results.md).
 
-**Per-person AI assistant setup:** see [docs/README.md](docs/README.md) (role briefs in `docs/ai/`, personal files under `docs/contributors/<name>/`).
+**Documentation index:** see [docs/README.md](docs/README.md). **Final report:** [Report/DS205 Final TPI Recommendation Report.pdf](Report/DS205%20Final%20TPI%20Recommendation%20Report.pdf). **Team handoff:** [docs/handoff/HANDOFF.md](docs/handoff/HANDOFF.md).
 
 ## Overview
 

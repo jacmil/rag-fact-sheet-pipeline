@@ -394,4 +394,4 @@ chunk_records
   metadata        jsonb   - keys: company, source_file, strategy, pages, year, sector
 ```
 
-See `docs/` and `PROJECT_BOARD.md` for project-specific notes and AI assistant setup.
+See [docs/README.md](docs/README.md) for the documentation index, [docs/handoff/HANDOFF.md](docs/handoff/HANDOFF.md) for team handoff notes, and [docs/agent/RULES.md](docs/agent/RULES.md) for coding conventions.
