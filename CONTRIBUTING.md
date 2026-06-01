@@ -1,6 +1,27 @@
 # Contributing
 
-This document is for developers who want to understand the pipeline internals, fix bugs, or extend the codebase. For usage instructions, see README.md.
+This document is for developers who want to understand the pipeline internals, fix bugs, or extend the codebase. **README.md** is the entry point: clone, install, add PDFs, and run. This file is for people who will change or extend the code.
+
+## Project layout
+
+```
+pipeline.py              # Click CLI entry point
+extract.py               # PDF extraction and chunking (unstructured)
+embed.py                 # Embeddings → vector store
+retrieve.py              # Bi-encoder + cross-encoder retrieval
+generate.py              # HuggingFace answer generation
+utils.py                 # Config, env bootstrap, chunking helpers
+benchmark_metrics.py     # Backend benchmark functions and terminal report
+
+vector_store/            # ChromaDB and pgvector implementations
+evaluation/              # Ground-truth JSON + paths.py
+notebooks/               # Benchmark and reference-answer notebooks
+scripts/                 # check_pgvector.py smoke test
+tests/                   # pytest vector-store contract
+docs/                    # Human-readable evaluation and handoff notes
+alembic/                 # pgvector schema migrations
+docker-compose.yml       # Postgres for pgvector
+```
 
 ## How the pipeline works
 
@@ -65,19 +86,64 @@ cp .env.example .env
 # Edit .env to set PDF_SOURCE_DIR and any other config
 ```
 
-Required `.env` variables:
-
-| Variable | What it does |
-|----------|-------------|
-| `VECTOR_STORE` | `chroma` or `pgvector` |
-| `CHROMA_DIR` | Path to ChromaDB storage directory |
-| `PG_CONNECTION_STRING` | Postgres URL when `VECTOR_STORE=pgvector` (use `postgresql+psycopg://...`) |
-| `DATABASE_URL` | Same Postgres URL for Alembic migrations |
-| `PDF_SOURCE_DIR` | Parent directory containing one subfolder per company |
-| `COLLECTION_NAME` | Collection name for the vector store |
-| `HF_TOKEN` | HuggingFace access token (speeds up model downloads) |
-
 Optional variables with defaults are documented in `utils.py` inside `resolve_pipeline_config()`.
+
+## Configuration
+
+All runtime settings come from `.env`. Copy `.env.example` to get started.
+
+| Variable | Required | What it does |
+|----------|----------|--------------|
+| `PDF_SOURCE_DIR` | Yes | Parent directory with one subfolder per company |
+| `VECTOR_STORE` | Yes | `chroma` or `pgvector` |
+| `CHROMA_DIR` | When using chroma | Path to ChromaDB storage (default `data/chromadb`) |
+| `PG_CONNECTION_STRING` | When using pgvector | SQLAlchemy URL, e.g. `postgresql+psycopg://...` |
+| `DATABASE_URL` | When using pgvector | Same Postgres URL for Alembic migrations |
+| `COLLECTION_NAME` | No | Vector store collection name (default `tpi_vectors`) |
+| `OUTPUT_DIR` | No | Interim extract/chunk output (default `data/interim`) |
+| `PDF_GLOB` | No | PDF filename pattern (default `*.pdf`) |
+| `EMBEDDING_MODEL` | No | HuggingFace embedding model |
+| `RERANKING_MODEL` | No | Cross-encoder for retrieve stage |
+| `GENERATION_MODEL` | No | HuggingFace generation model |
+| `HF_HOME` | No | HuggingFace cache directory |
+| `HF_TOKEN` | No | HuggingFace token (optional; speeds downloads) |
+| `POSTGRES_*` | When using pgvector | Must match `docker-compose.yml` |
+
+Evaluation data paths (defaults via `evaluation/paths.py`):
+
+| File | Purpose |
+|------|---------|
+| `evaluation/reference_answers.json` | Manual Recall@5 reference queries |
+| `evaluation/document_metadata.json` | Company/year/sector overrides for embedding |
+| `evaluation/evaluation_results.json` | Optional notebook export (empty `{}` until regenerated) |
+
+## CLI reference
+
+Entry point: `python pipeline.py <command>`
+
+| Command | Description |
+|---------|-------------|
+| `extract` | Extract PDFs and write chunks to `data/interim/` |
+| `embed` | Embed chunks and upsert into the configured vector store |
+| `retrieve` | Print top retrieved chunks for a query |
+| `generate` | Retrieve chunks and print a cited generated answer |
+| `run-all` | Run extract → embed → retrieve → generate in sequence |
+
+Options:
+
+| Option | Commands | Description |
+|--------|----------|-------------|
+| `--query`, `-q` | `retrieve`, `generate`, `run-all` | Question text (defaults to a built-in example query) |
+
+Examples:
+
+```bash
+python pipeline.py run-all -q "What are Hershey Company's emissions targets?"
+python pipeline.py extract
+python pipeline.py embed
+python pipeline.py retrieve -q "What are the emissions targets?"
+python pipeline.py generate -q "What are the emissions targets?"
+```
 
 ### Running the pipeline
 

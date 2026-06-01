@@ -2,8 +2,8 @@
 
 ## Core docs (repo root)
 
-- **[README.md](../README.md)** — overview, quick start, configuration
-- **[CONTRIBUTING.md](../CONTRIBUTING.md)** — developer setup, pipeline internals, pgvector Docker guide
+- **[README.md](../README.md)** — clone, install, run the pipeline on your PDFs
+- **[CONTRIBUTING.md](../CONTRIBUTING.md)** — configuration, CLI, internals, pgvector Docker, benchmarks
 - **[DECISIONS.md](../DECISIONS.md)** — vector store, pipeline, evaluation, and deployment tradeoffs
 
 ## Report and handoff
