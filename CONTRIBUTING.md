@@ -119,7 +119,7 @@ reference set. It produced the same mean precision@5 as natural-language
 retrieval, so the keyword rewriting path was removed and production retrieval
 uses the original query text.
 
-`reference_answers.json` contains 20 manually labelled queries. The current local
+`evaluation/reference_answers.json` contains 20 manually labelled queries. The current local
 set covers 15 companies, 17 PDFs, 3 sectors, and publication years from 2016 to
 2024. The chunk corpus currently has 5,913 chunks under `data/interim/chunks/`.
 See [docs/evaluation/reference_answers_review.md](docs/evaluation/reference_answers_review.md)
@@ -147,7 +147,7 @@ config = resolve_pipeline_config()
 store = get_vector_store(config.collection_name)
 model = SentenceTransformer(config.embedding_model)
 
-with open('reference_answers.json') as f:
+with open('evaluation/reference_answers.json') as f:
     ground_truth = json.load(f)
 
 df = evaluate_retrieval(ground_truth, store, model, k=5)
@@ -174,7 +174,7 @@ To extend the reference set when adding new companies:
 1. Read the PDF for a new query
 2. Manually identify which chunks contain the correct answer
 3. Note the chunk IDs
-4. Add entry to `reference_answers.json`:
+4. Add entry to `evaluation/reference_answers.json`:
    ```json
    {
      "query": "Your question here",
@@ -185,7 +185,7 @@ To extend the reference set when adding new companies:
 
 ### Backend benchmark notebook
 
-The benchmarker workflow is notebook-first. Use `benchmark_exploration.ipynb`
+The benchmarker workflow is notebook-first. Use `notebooks/benchmark_exploration.ipynb`
 to test ideas and inspect pandas DataFrames. Stable helper functions live in
 `benchmark_metrics.py`, and the notebook imports them.
 The consolidated benchmark tables and recommendation are in
@@ -211,7 +211,7 @@ The notebook covers these comparison tables:
 | Ingestion throughput | Time to embed chunks plus store them, with `store.add()` time also separated |
 | Query latency | Time spent inside `store.query()` for each query/repeat |
 | Filter overhead | Same query timing with company, year, and sector filters when metadata exists |
-| Recall@5 | Top-k results scored against `reference_answers.json` |
+| Recall@5 | Top-k results scored against `evaluation/reference_answers.json` |
 | MRR | First relevant result rank from the top-k table |
 | Score/ranking parity | Top-k cosine scores and chunk ID order across backends |
 | Deployment complexity | Extra services, Docker Compose line count, and clean-machine setup steps |
@@ -248,13 +248,13 @@ python scripts/check_pgvector.py
 python benchmark_metrics.py
 ```
 
-Or open `benchmark_exploration.ipynb` and run the cells. The notebook uses
+Or open `notebooks/benchmark_exploration.ipynb` and run the cells. The notebook uses
 temporary benchmark collections and cleans them up after each run.
-`evaluation_results.json` is intentionally empty by default; only write it after
+`evaluation/evaluation_results.json` is intentionally empty by default; only write it after
 the notebook output looks right by running:
 
 ```python
-write_results_json(results, "evaluation_results.json")
+write_results_json(results)
 ```
 
 `benchmark_metrics.py` can also be run directly. It prints a compact console

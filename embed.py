@@ -9,6 +9,7 @@ import numpy as np
 from pathlib import Path
 from sentence_transformers import SentenceTransformer
 
+from evaluation.paths import DOCUMENT_METADATA
 from vector_store import VectorStore
 from utils import resolve_pipeline_config, PipelineConfig
 
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 # Encode and store this many chunks per batch. 256 balances memory
 # usage against the overhead of repeated store.add() calls.
 BATCH_SIZE: int = 256
-METADATA_OVERRIDES_PATH = Path("document_metadata.json")
+METADATA_OVERRIDES_PATH = DOCUMENT_METADATA
 NUL_BYTE = "\x00"
 
 

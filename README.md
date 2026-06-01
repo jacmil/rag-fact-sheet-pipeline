@@ -11,11 +11,11 @@ RAG pipeline for TPI Centre Carbon Performance data, built to compare ChromaDB a
 
 This pipeline extracts text from corporate sustainability PDFs, chunks it, embeds it with sentence-transformers, stores it in a vector database, and answers questions about company emissions targets using a small language model. The same pipeline runs against two vector store backends (ChromaDB and pgvector) so we can benchmark ingestion throughput, query latency, and retrieval quality for TPI's use case.
 
-Data comes from TPI Centre Carbon Performance assessment PDFs and related corporate climate disclosures. PDFs and generated data are not committed to Git. The current local evaluation set contains 17 PDFs, 5,913 chunks, and a manually labelled 20-query reference set across Energy Utilities, Diversified Mining, and Food. Company, year, and sector metadata live in `document_metadata.json`.
+Data comes from TPI Centre Carbon Performance assessment PDFs and related corporate climate disclosures. PDFs and generated data are not committed to Git. The current local evaluation set contains 17 PDFs, 5,913 chunks, and a manually labelled 20-query reference set across Energy Utilities, Diversified Mining, and Food. Company, year, and sector metadata live in `evaluation/document_metadata.json`.
 
 ## Current benchmark status
 
-Use `benchmark_exploration.ipynb` for the notebook workflow. It imports helper functions from `benchmark_metrics.py` and shows pandas DataFrames for ingestion speed, query latency, retrieval quality, metadata filters, deployment complexity, and code legibility. The notebook only writes `evaluation_results.json` if you run the optional save cell.
+Use `notebooks/benchmark_exploration.ipynb` for the notebook workflow. It imports helper functions from `benchmark_metrics.py` and shows pandas DataFrames for ingestion speed, query latency, retrieval quality, metadata filters, deployment complexity, and code legibility. The notebook only writes `evaluation/evaluation_results.json` if you run the optional save cell.
 
 The latest full local run used 20 reference queries, `k=5`, and 3 query repeats. ChromaDB and pgvector returned the same top-5 chunk order for all 20 queries. Mean retrieval quality was identical: recall@5 `0.4267`, precision@5 `0.18`, and MRR `0.4125`. On that run, ChromaDB had lower query latency, while pgvector had faster store-only ingestion. Re-run the benchmark before reporting final numbers, since timing depends on the machine and current Docker state.
 

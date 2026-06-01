@@ -1,7 +1,7 @@
 # Reference Answer Labelling Notes
 
-`reference_answers.json` is the manual Recall@5 reference set used by
-`benchmark_exploration.ipynb` and `benchmark_metrics.py`. It is used to compare
+`evaluation/reference_answers.json` is the manual Recall@5 reference set used by
+`notebooks/benchmark_exploration.ipynb` and `benchmark_metrics.py`. It is used to compare
 ChromaDB and pgvector retrieval, not to grade generated answers.
 
 ## Current Set
@@ -29,8 +29,8 @@ BHP, Capital Power, Center Point, Chubu, Danone, Freeport, Glencore, Hershey
 Company, Kraft Heinz, Orkla, Rio Tinto, Vale, and Vedanta.
 
 The labels were created manually. For each question, the PDF was inspected,
-candidate extracted chunks were searched in `reference_answer_builder.ipynb`,
-and the final `chunk_id` values were added to `reference_answers.json` only
+candidate extracted chunks were searched in `notebooks/reference_answer_builder.ipynb`,
+and the final `chunk_id` values were added to `evaluation/reference_answers.json` only
 after reading the full chunk text. This matters because Recall@5 depends on the
 manual judgement of which chunks actually contain the answer.
 
@@ -61,8 +61,8 @@ Metadata is attached during embedding in `embed.py`.
 | `source_file` | PDF filename stem |
 | `pages` | extracted chunk page numbers |
 | `strategy` | chunking strategy |
-| `year` | `document_metadata.json` or filename inference |
-| `sector` | `document_metadata.json` |
+| `year` | `evaluation/document_metadata.json` or filename inference |
+| `sector` | `evaluation/document_metadata.json` |
 
 The benchmark checks unfiltered search and `where` filters for company, year,
 and sector.
@@ -71,12 +71,12 @@ and sector.
 
 1. Add PDFs under `data/pdfs/<Company Name>/`.
 2. Run `python pipeline.py extract` to create chunk JSONL files.
-3. Add company and document metadata to `document_metadata.json`.
+3. Add company and document metadata to `evaluation/document_metadata.json`.
 4. Read the relevant page or passage in the source PDF.
-5. Use `reference_answer_builder.ipynb` to search candidate chunks by phrase,
+5. Use `notebooks/reference_answer_builder.ipynb` to search candidate chunks by phrase,
    page, company, or source file.
 6. Inspect the full chunk text, not only the truncated preview.
-7. Manually copy the selected `chunk_id` values into `reference_answers.json`
+7. Manually copy the selected `chunk_id` values into `evaluation/reference_answers.json`
    under the query's `relevant_ids` list.
 8. Validate that every labelled chunk ID exists before running the benchmark.
 
@@ -96,7 +96,7 @@ and sector.
 Check JSON syntax:
 
 ```bash
-python -m json.tool reference_answers.json > /dev/null
+python -m json.tool evaluation/reference_answers.json > /dev/null
 ```
 
 Run the benchmark:
@@ -107,6 +107,6 @@ alembic upgrade head
 HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 python benchmark_metrics.py
 ```
 
-Open `benchmark_exploration.ipynb` when you want pandas DataFrames and optional
-JSON export. Only run `write_results_json(results, "evaluation_results.json")`
+Open `notebooks/benchmark_exploration.ipynb` when you want pandas DataFrames and optional
+JSON export. Only run `write_results_json(results, "evaluation/evaluation_results.json")`
 after the notebook output looks correct.

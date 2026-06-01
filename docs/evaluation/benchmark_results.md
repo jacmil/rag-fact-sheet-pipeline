@@ -80,8 +80,8 @@ backends store the same vectors and return the same ranked chunks.
 
 The reference set behind these scores was manually labelled. Questions were
 written from source PDF passages, candidate chunks were searched and inspected in
-`reference_answer_builder.ipynb`, and the selected `chunk_id` values were added
-to `reference_answers.json` by hand. See
+`notebooks/reference_answer_builder.ipynb`, and the selected `chunk_id` values were added
+to `evaluation/reference_answers.json` by hand. See
 [`reference_answers_review.md`](reference_answers_review.md) for the labelling
 workflow.
 

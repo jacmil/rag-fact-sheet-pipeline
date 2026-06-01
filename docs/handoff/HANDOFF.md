@@ -24,7 +24,7 @@ look when writing the final report.
 
 - Documented that the reference chunks were manually selected.
   - I inspected PDFs and full chunk text, then manually added the correct
-    `chunk_id` values to `reference_answers.json`.
+    `chunk_id` values to `evaluation/reference_answers.json`.
 
 ## Where To Look First
 
