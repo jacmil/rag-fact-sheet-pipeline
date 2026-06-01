@@ -56,7 +56,7 @@ SQLAlchemy connects via psycopg v3 (`postgresql+psycopg://…`). Bare `postgresq
 
 ### Backend equivalence validated before merge
 
-pgvector recall@5 was checked against the ChromaDB baseline on `reference_answers.json` (bi-encoder only, k=5): emissions targets 0.25, power stations 1.00, renewables investment 1.00. Top-5 chunk IDs and order matched on all three queries. If numbers diverge after changes, check upsert logic and cosine score conversion in `pgvector.py` first; `retrieve.py` is backend-agnostic and should not need changes.
+pgvector recall@5 was checked against the ChromaDB baseline on `evaluation/reference_answers.json` (bi-encoder only, k=5): emissions targets 0.25, power stations 1.00, renewables investment 1.00. Top-5 chunk IDs and order matched on all three queries. If numbers diverge after changes, check upsert logic and cosine score conversion in `pgvector.py` first; `retrieve.py` is backend-agnostic and should not need changes.
 
 ## Pipeline integration
 
@@ -90,7 +90,7 @@ not improve mean precision@5, so the keyword rewriting path was removed.
 
 ### Notebook-first benchmark implementation
 
-The benchmarker workflow is notebook-first. `benchmark_exploration.ipynb` is the
+The benchmarker workflow is notebook-first. `notebooks/benchmark_exploration.ipynb` is the
 scratch surface for running experiments and inspecting pandas DataFrames.
 `benchmark_metrics.py` contains reusable helper functions once a notebook cell
 is stable enough to extract.
@@ -100,13 +100,13 @@ and a temporary pgvector collection. Benchmark chunk IDs are prefixed with
 `tpi_vectors_benchmark__` so pgvector upserts cannot overwrite production chunk
 IDs. Cleanup deletes the benchmark collections after each run.
 
-The notebook does not write result artifacts automatically. `evaluation_results.json`
+The notebook does not write result artifacts automatically. `evaluation/evaluation_results.json`
 starts as `{}` and should only be written after the notebook output looks right.
 This keeps failed exploratory runs from becoming report evidence by accident.
 
 ### Reference set evaluates bi-encoder only
 
-`reference_answers.json` and `evaluate_retrieval()` measure retrieval without cross-encoder reranking. The cross-encoder is identical code regardless of backend, so including it would add noise without helping isolate backend differences. When comparing ChromaDB vs pgvector, measure bi-encoder performance. For end-to-end retrieval quality (bi-encoder + cross-encoder), run the full `run_retrieve()` pipeline from `retrieve.py` instead.
+`evaluation/reference_answers.json` and `evaluate_retrieval()` measure retrieval without cross-encoder reranking. The cross-encoder is identical code regardless of backend, so including it would add noise without helping isolate backend differences. When comparing ChromaDB vs pgvector, measure bi-encoder performance. For end-to-end retrieval quality (bi-encoder + cross-encoder), run the full `run_retrieve()` pipeline from `retrieve.py` instead.
 
 **Current baseline (AGL document, bi-encoder, k=5, validated 24 May 2026):**
 

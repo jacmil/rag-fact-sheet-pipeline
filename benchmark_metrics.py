@@ -15,6 +15,7 @@ from pypdf import PdfReader
 from sentence_transformers import SentenceTransformer
 
 from embed import BATCH_SIZE, build_chunk_records, load_all_chunks
+from evaluation.paths import EVALUATION_RESULTS, REFERENCE_ANSWERS
 from utils import PipelineConfig, resolve_pipeline_config
 from vector_store import VectorStore
 
@@ -29,7 +30,7 @@ BACKEND_FILES = {
 }
 
 
-def load_reference_answers(path: str | Path = "reference_answers.json") -> list[dict]:
+def load_reference_answers(path: str | Path = REFERENCE_ANSWERS) -> list[dict]:
     """Load the manually labelled Recall@5 reference set."""
     with Path(path).open("r", encoding="utf-8") as f:
         return json.load(f)
@@ -65,7 +66,7 @@ def make_store(
 
 def load_benchmark_inputs(
     config: PipelineConfig,
-    reference_path: str | Path = "reference_answers.json",
+    reference_path: str | Path = REFERENCE_ANSWERS,
     max_chunks: int | None = None,
     max_queries: int | None = None,
 ) -> dict[str, Any]:
@@ -822,7 +823,7 @@ def run_backend_once(
 
 def run_backend_benchmark(
     backends: tuple[str, ...] = ("chroma", "pgvector"),
-    reference_path: str | Path = "reference_answers.json",
+    reference_path: str | Path = REFERENCE_ANSWERS,
     batch_size: int = BATCH_SIZE,
     query_repeats: int = 3,
     k: int = 5,
@@ -1002,7 +1003,7 @@ def dataframe_to_records(frame: pd.DataFrame) -> list[dict[str, Any]]:
 
 def write_results_json(
     results: dict[str, Any],
-    path: str | Path = "evaluation_results.json",
+    path: str | Path = EVALUATION_RESULTS,
 ) -> None:
     """Optional export after the notebook results look right."""
     summaries = summarise_results(results)

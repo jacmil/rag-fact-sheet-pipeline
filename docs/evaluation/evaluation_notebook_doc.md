@@ -1,7 +1,7 @@
 # Evaluation Notebook Notes
 
 This note records the full local pipeline and benchmark check run on 31 May 2026.
-It summarizes what should be reflected in `benchmark_exploration.ipynb` and in the
+It summarizes what should be reflected in `notebooks/benchmark_exploration.ipynb` and in the
 written recommendation.
 
 ## Pipeline Status
@@ -185,7 +185,7 @@ main bottleneck.
 ## File Notes
 
 `benchmark_metrics.py` prints the benchmark results but does not automatically
-write `evaluation_results.json`. Only export JSON from the notebook after the
-pandas tables look correct. `evaluation_results.json` is tracked as an empty
+write `evaluation/evaluation_results.json`. Only export JSON from the notebook after the
+pandas tables look correct. `evaluation/evaluation_results.json` is tracked as an empty
 placeholder by default; treat populated benchmark exports as local run artifacts
 unless regenerated from the latest run and intentionally reviewed.

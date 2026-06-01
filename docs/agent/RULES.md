@@ -50,10 +50,10 @@ Document your stages in README.md or CONTRIBUTING.md: what each stage does, how 
 
 Conventions for where things live:
 
-- **PDFs** — `data/raw/{sector}/{company}/`. Document if data cannot be stored in the repo.
-- **Extracted text** — `data/extracted/` (one `.txt` per PDF).
-- **Embeddings / chunks** — `data/interim/` (embeddings.npy, chunks_metadata.json, chunks_text.json). Document in README.
-- **Pipeline code** — `pipeline.py` with Click commands, or `src/` modules per stage.
+- **PDFs** — `data/pdfs/{company}/` (gitignored; obtain from team SharePoint). Document layout in README.
+- **Extracted / chunked data** — `data/interim/raw/` (pickle cache), `data/interim/chunks/` (JSONL).
+- **Vector stores** — `data/chromadb/` (Chroma) or Docker volume for pgvector; see `vector_store/`.
+- **Pipeline code** — `pipeline.py` (Click CLI) plus stage modules: `extract.py`, `embed.py`, `retrieve.py`, `generate.py`, `utils.py`.
 - **Environment** — `environment.yml` or `requirements.txt`. Document Python version.
 - **Per-tool configuration** — `config/<tool>.config.yaml` (see **Configuration files** below)
 
@@ -115,7 +115,7 @@ Use YAML files under **`config/`** whenever a pipeline stage or feature has **se
 
 - Someone cloning the repo must be able to reproduce results by following README.md
 - **Document clearly:** API keys, large model downloads, data not in the repo
-- **Test on GitHub Actions** — Recommended for W07; useful for final submission
+- **Run tests locally** — `python -m pytest` (see `tests/`). Contract tests cover both Chroma and pgvector backends.
 
 ---
 

@@ -80,13 +80,35 @@ backends store the same vectors and return the same ranked chunks.
 
 The reference set behind these scores was manually labelled. Questions were
 written from source PDF passages, candidate chunks were searched and inspected in
-`reference_answer_builder.ipynb`, and the selected `chunk_id` values were added
-to `reference_answers.json` by hand. See
+`notebooks/reference_answer_builder.ipynb`, and the selected `chunk_id` values were added
+to `evaluation/reference_answers.json` by hand. See
 [`reference_answers_review.md`](reference_answers_review.md) for the labelling
 workflow.
 
 Numerical takeaway: backend choice changed none of the retrieval-quality metrics.
 The difference was `0.000` for mean recall@5, precision@5, and MRR.
+
+## Retrieval accuracy limitations
+
+**Important:** The benchmark shows **identical** retrieval between ChromaDB and pgvector, but **absolute accuracy is modest**. On the 20-query reference set at `k=5`:
+
+| Metric | Value | Plain-language meaning |
+|--------|------:|------------------------|
+| Mean precision@5 | **~0.18** | On average, only about **1–2 of the top 5** retrieved chunks are labelled relevant |
+| Mean recall@5 | **~0.43** | On average, the top 5 retrieve roughly **43%** of all chunks marked relevant for a query |
+| Mean MRR | **~0.41** | The first relevant hit often appears around **rank 2–3**, not rank 1 |
+
+These numbers reflect the **current end-to-end pipeline** (PDF extraction, chunking, `multi-qa-MiniLM-L6-cos-v1` bi-encoder, manual reference labels) — **not** a difference between vector stores. Do not interpret low precision as evidence that one backend is worse than the other.
+
+**Possible improvements** (not implemented in this submission):
+
+- Stronger **embedding** or **reranking** models (e.g. larger sentence-transformers or domain-tuned encoders)
+- **Chunking** changes (size, overlap, table-aware splitting, section boundaries)
+- **Hybrid retrieval** (dense + keyword/BM25) or metadata-first filtering before vector search
+- **Query rewriting** or multi-query expansion (tested briefly; did not beat natural-language queries on the AGL subset — see DECISIONS.md)
+- Richer **reference labels** or higher `k` if users need more complete recall
+
+Re-run `python benchmark_metrics.py` or `notebooks/benchmark_exploration.ipynb` after any pipeline change to measure impact on these metrics.
 
 ## Query Speed
 
