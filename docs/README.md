@@ -19,6 +19,8 @@ Meeting notes used for project scoping and benchmark priorities:
 
 ## Evaluation
 
+**Two folders:** `evaluation/` at the repo root contains benchmark **data** (`reference_answers.json`, `document_metadata.json`, `paths.py`). **`docs/evaluation/`** (below) contains benchmark **write-ups** in markdown.
+
 - **[docs/evaluation/](evaluation/)** — benchmark notes, reference set documentation, and labelling rules
 - Start with **[benchmark_results.md](evaluation/benchmark_results.md)** for consolidated tables and the recommendation
 

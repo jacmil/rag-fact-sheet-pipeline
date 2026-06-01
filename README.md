@@ -63,10 +63,12 @@ evaluation/                       # reference_answers.json, document_metadata.js
 notebooks/                        # benchmark_exploration.ipynb, reference_answer_builder.ipynb
 scripts/check_pgvector.py         # pgvector smoke test
 tests/                            # pytest contract suite
-docs/                             # evaluation write-ups, handoff, agent rules
+docs/                             # handoff, agent rules; benchmark write-ups in docs/evaluation/
 Report/                           # final team PDF
 data/                             # PDFs and pipeline output (gitignored)
 ```
+
+**Note:** `evaluation/` at the repo root holds benchmark **data** (JSON + `paths.py`). **`docs/evaluation/`** holds benchmark **documentation** (markdown). They are different folders.
 
 ## Further reading
 
