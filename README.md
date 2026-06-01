@@ -124,7 +124,7 @@ group-project-json-derulo-comeback-tour/
 │       └── reference_answers_review.md
 │
 ├── Report/
-│   └── DS205 Final TPI Recommendation Report.pdf
+│   └── DS205 TPI Final Report.pdf
 │
 └── data/                       # Gitignored — created when you run the pipeline
     ├── pdfs/                   # Your PDFs (one subfolder per company)
@@ -145,6 +145,6 @@ group-project-json-derulo-comeback-tour/
 | [DECISIONS.md](DECISIONS.md)                                                                                 | Design rationale                                                  |
 | [docs/README.md](docs/README.md)                                                                             | Documentation index                                               |
 | [docs/evaluation/benchmark_results.md](docs/evaluation/benchmark_results.md)                                 | Benchmark tables and recommendation                               |
-| [Report/DS205 Final TPI Recommendation Report.pdf](Report/DS205%20Final%20TPI%20Recommendation%20Report.pdf) | Final submission report                                           |
+| [Report/DS205 TPI Final Report.pdf](Report/DS205%20TPI%20Final%20Report.pdf) | Final submission report                                           |
 
 

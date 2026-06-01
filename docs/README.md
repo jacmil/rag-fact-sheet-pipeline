@@ -8,7 +8,7 @@
 
 ## Report and handoff
 
-- **[Report/DS205 Final TPI Recommendation Report.pdf](../Report/DS205%20Final%20TPI%20Recommendation%20Report.pdf)** — final team recommendation (ChromaDB vs pgvector)
+- **[Report/DS205 TPI Final Report.pdf](../Report/DS205%20TPI%20Final%20Report.pdf)** — final team recommendation (ChromaDB vs pgvector)
 - **[docs/handoff/HANDOFF.md](handoff/HANDOFF.md)** — transparent communication between teammates and AI agents of what is build already and what needs to be done next
 
 ## Transcripts
