@@ -26,8 +26,8 @@ Meeting notes used for project scoping and benchmark priorities:
 
 ## AI assistant / coding rules
 
-Personal Cursor / Copilot guidance for this repo:
+Personal AI agents guidance for this repo:
 
 - **[docs/agent/RULES.md](agent/RULES.md)** — DS205 coding conventions and project constraints
 
-In Cursor: **Settings → Rules** for this project, or reference `@docs/agent/RULES.md` when prompting.
+E.g. in Cursor: **Settings → Rules** for this project, or reference `@docs/agent/RULES.md` when prompting.
