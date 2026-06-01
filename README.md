@@ -6,6 +6,8 @@ RAG pipeline for TPI Centre Carbon Performance PDFs. Extracts and chunks sustain
 
 **Recommendation:** For TPI-style retrieval on a laptop, **ChromaDB is the default** (identical retrieval quality, lower query latency, simpler setup). See [docs/evaluation/benchmark_results.md](docs/evaluation/benchmark_results.md) for numbers and when pgvector is worth it.
 
+**Limitation:** Absolute retrieval precision is modest (**~0.18 @ k=5** on our reference set); improving it would require pipeline or model changes, not switching vector stores. Details in [benchmark_results.md § Retrieval accuracy limitations](docs/evaluation/benchmark_results.md#retrieval-accuracy-limitations).
+
 ## Quick start
 
 ```bash
@@ -39,7 +41,7 @@ The team benchmark used **17 PDFs** (5,913 chunks, 20 reference queries).
 python pipeline.py run-all --query "What are the emissions targets for AGL?"
 ```
 
-Stages can also be run separately: `extract`, `embed`, `retrieve`, `generate`. Output goes under `data/` (gitignored). Use `**VECTOR_STORE=chroma**` in `.env` for the simplest path; pgvector requires Docker — see [CONTRIBUTING.md](CONTRIBUTING.md#pgvector-backend-docker--postgres).
+Stages can also be run separately: `extract`, `embed`, `retrieve`, `generate`. Output goes under `data/` (gitignored). Use **`VECTOR_STORE=chroma`** in `.env` for the simplest path; pgvector requires Docker — see [CONTRIBUTING.md](CONTRIBUTING.md#pgvector-backend-docker--postgres).
 
 ### 3. Optional checks
 

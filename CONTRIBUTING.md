@@ -4,24 +4,7 @@ This document is for developers who want to understand the pipeline internals, f
 
 ## Project layout
 
-```
-pipeline.py              # Click CLI entry point
-extract.py               # PDF extraction and chunking (unstructured)
-embed.py                 # Embeddings → vector store
-retrieve.py              # Bi-encoder + cross-encoder retrieval
-generate.py              # HuggingFace answer generation
-utils.py                 # Config, env bootstrap, chunking helpers
-benchmark_metrics.py     # Backend benchmark functions and terminal report
-
-vector_store/            # ChromaDB and pgvector implementations
-evaluation/              # Ground-truth JSON + paths.py
-notebooks/               # Benchmark and reference-answer notebooks
-scripts/                 # check_pgvector.py smoke test
-tests/                   # pytest vector-store contract
-docs/                    # Human-readable evaluation and handoff notes
-alembic/                 # pgvector schema migrations
-docker-compose.yml       # Postgres for pgvector
-```
+See [README.md#project-layout](README.md#project-layout) for the full repository tree. Key areas for contributors: root stage modules, `vector_store/`, `evaluation/`, `notebooks/`, `tests/`, `docs/`, and `alembic/` (pgvector only).
 
 ## How the pipeline works
 
@@ -53,6 +36,7 @@ vector_store/
 
 ## Known bugs and areas for improvement
 
+- **Low retrieval precision (~0.18 @ k=5).** Mean precision@5 on the 20-query reference set is about **0.18** (recall@5 ~0.43). Both backends score the same — this is a pipeline/model/chunking limitation, not a Chroma vs pgvector issue. See [docs/evaluation/benchmark_results.md#retrieval-accuracy-limitations](docs/evaluation/benchmark_results.md#retrieval-accuracy-limitations) for interpretation and improvement directions.
 - `bitsandbytes` does not work on macOS Apple Silicon. Generation runs without quantisation on Mac.
 - The current local cross-encoder can return non-finite scores. `retrieve.py` falls back to the bi-encoder order in that case. Backend benchmarking uses bi-encoder retrieval only, so this does not affect the ChromaDB vs pgvector comparison.
 
@@ -143,19 +127,6 @@ python pipeline.py extract
 python pipeline.py embed
 python pipeline.py retrieve -q "What are the emissions targets?"
 python pipeline.py generate -q "What are the emissions targets?"
-```
-
-### Running the pipeline
-
-```bash
-# Full pipeline
-python pipeline.py run-all --query "What are the emissions targets for Hershey Company?"
-
-# Individual stages
-python pipeline.py extract
-python pipeline.py embed
-python pipeline.py retrieve --query "What are the emissions targets?"
-python pipeline.py generate --query "What are the emissions targets?"
 ```
 
 ### Running tests
