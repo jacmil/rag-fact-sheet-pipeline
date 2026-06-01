@@ -32,7 +32,7 @@ vector_store/
   db.py          SQLAlchemy schema for chunk_records (pgvector backend)
 ```
 
-`factory.py` uses lazy imports so the chroma path doesn't require pgvector packages installed, and vice versa. Key design decisions are documented in DECISIONS.md.
+`factory.py` uses lazy imports so the chroma path doesn't require pgvector packages installed, and vice versa. Key design decisions are documented in [DECISIONS.md](DECISIONS.md).
 
 ## Known bugs and areas for improvement
 
@@ -40,35 +40,16 @@ vector_store/
 - `bitsandbytes` does not work on macOS Apple Silicon. Generation runs without quantisation on Mac.
 - The current local cross-encoder can return non-finite scores. `retrieve.py` falls back to the bi-encoder order in that case. Backend benchmarking uses bi-encoder retrieval only, so this does not affect the ChromaDB vs pgvector comparison.
 
-## Setting up the development environment
+## Development setup
 
-### Prerequisites
+Follow [README.md#quick-start](README.md#quick-start) for clone, conda environment creation, and `.env` setup.
 
-- conda (Miniconda or Anaconda)
+Prerequisites beyond the README:
+
 - Git with SSH access to the `lse-ds205` GitHub org
-- TPI Carbon Performance PDFs (from the SharePoint folder linked in the project brief)
+- TPI Carbon Performance PDFs (from the team SharePoint folder linked in the project brief)
 
 Tested on macOS Apple Silicon (M2, 16GB RAM). System dependencies (`poppler`, `tesseract`, `pandoc`) are handled by conda.
-
-### Installation
-
-```bash
-# 1. Clone the repository
-git clone git@github.com:lse-ds205/group-project-json-derulo-comeback-tour.git
-cd group-project-json-derulo-comeback-tour
-
-# 2. Create and activate the conda environment
-conda env create -f environment.yml
-conda activate project-d
-```
-
-> **Note:** conda environment creation takes 25-30 minutes on the pip dependency resolution step. This is normal; don't kill it.
-
-```bash
-# 3. Set up environment variables
-cp .env.example .env
-# Edit .env to set PDF_SOURCE_DIR and any other config
-```
 
 Optional variables with defaults are documented in `utils.py` inside `resolve_pipeline_config()`.
 
@@ -101,6 +82,8 @@ Evaluation data paths (defaults via `evaluation/paths.py`):
 | `evaluation/document_metadata.json` | Company/year/sector overrides for embedding |
 | `evaluation/evaluation_results.json` | Optional notebook export (empty `{}` until regenerated) |
 
+Pipeline output directories (`data/` is gitignored) are listed in [README.md#project-layout](README.md#project-layout).
+
 ## CLI reference
 
 Entry point: `python pipeline.py <command>`
@@ -129,11 +112,9 @@ python pipeline.py retrieve -q "What are the emissions targets?"
 python pipeline.py generate -q "What are the emissions targets?"
 ```
 
-### Running tests
+## Running tests
 
-The pytest suite checks the shared vector-store contract against ChromaDB and
-pgvector. It uses a tiny synthetic 384-dimensional dataset, so it does not embed
-PDFs or touch the production `tpi_vectors` collection.
+The pytest suite checks the shared vector-store contract against ChromaDB and pgvector. It uses a tiny synthetic 384-dimensional dataset, so it does not embed PDFs or touch the production `tpi_vectors` collection.
 
 ```bash
 python -m pytest
@@ -149,164 +130,38 @@ python -m pytest
 
 If Postgres is not available, pgvector tests skip and ChromaDB tests still run.
 
-### Reference set and benchmark metrics
+## Evaluation and benchmarks
 
-Keyword extraction was tested against natural-language queries on the AGL
-reference set. It produced the same mean precision@5 as natural-language
-retrieval, so the keyword rewriting path was removed and production retrieval
-uses the original query text.
+The submitted evaluation compares ChromaDB and pgvector on the same corpus and reference set. Detailed tables, interpretation, and the Chroma recommendation are in [docs/evaluation/benchmark_results.md](docs/evaluation/benchmark_results.md). Labelling rules and reference-set summary: [docs/evaluation/reference_answers_review.md](docs/evaluation/reference_answers_review.md). Run notes: [docs/evaluation/evaluation_notebook_doc.md](docs/evaluation/evaluation_notebook_doc.md).
 
-`evaluation/reference_answers.json` contains 20 manually labelled queries. The current local
-set covers 15 companies, 17 PDFs, 3 sectors, and publication years from 2016 to
-2024. The chunk corpus currently has 5,913 chunks under `data/interim/chunks/`.
-See [docs/evaluation/reference_answers_review.md](docs/evaluation/reference_answers_review.md)
-for the labelling rules and current reference set summary.
+Reference set at submission: 20 manually labelled queries, 15 companies, 17 PDFs, 5,913 chunks (see `evaluation/reference_answers.json`). Benchmarks use bi-encoder top-k retrieval before cross-encoder reranking.
 
-Reference coverage by sector:
-
-| Sector | Reference queries |
-|--------|------------------:|
-| Energy Utilities | 8 |
-| Diversified Mining | 8 |
-| Food | 4 |
-
-The reference labels are used for backend comparison, not generation quality.
-They measure bi-encoder top-k retrieval before cross-encoder reranking.
+**Correctness check** (vector-store contract):
 
 ```bash
-HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 python -c "
-import json
-from sentence_transformers import SentenceTransformer
-from vector_store import get_vector_store
-from utils import resolve_pipeline_config, evaluate_retrieval
-
-config = resolve_pipeline_config()
-store = get_vector_store(config.collection_name)
-model = SentenceTransformer(config.embedding_model)
-
-with open('evaluation/reference_answers.json') as f:
-    ground_truth = json.load(f)
-
-df = evaluate_retrieval(ground_truth, store, model, k=5)
-print(df.to_string(index=False))
-"
+python -m pytest
 ```
 
-The benchmark notebook and script add timing, filter, ranking, and code
-legibility tables on top of this basic retrieval evaluation.
-
-Latest full local benchmark run:
-
-| Metric | ChromaDB | pgvector |
-|--------|---------:|---------:|
-| Mean recall@5 | 0.4267 | 0.4267 |
-| Mean precision@5 | 0.18 | 0.18 |
-| Mean MRR | 0.4125 | 0.4125 |
-| Same top-5 order | 20 / 20 | 20 / 20 |
-
-Timing is machine-dependent. Use the notebook or `benchmark_metrics.py` for
-fresh numbers before writing the final report.
-
-To extend the reference set when adding new companies:
-1. Read the PDF for a new query
-2. Manually identify which chunks contain the correct answer
-3. Note the chunk IDs
-4. Add entry to `evaluation/reference_answers.json`:
-   ```json
-   {
-     "query": "Your question here",
-     "relevant_ids": ["chunk_id_1", "chunk_id_2", ...]
-   }
-   ```
-5. Re-run `evaluate_retrieval()` to measure impact of any pipeline changes
-
-### Backend benchmark notebook
-
-The benchmarker workflow is notebook-first. Use `notebooks/benchmark_exploration.ipynb`
-to test ideas and inspect pandas DataFrames. Stable helper functions live in
-`benchmark_metrics.py`, and the notebook imports them.
-The consolidated benchmark tables and recommendation are in
-[docs/evaluation/benchmark_results.md](docs/evaluation/benchmark_results.md).
-Detailed run notes are in
-[docs/evaluation/evaluation_notebook_doc.md](docs/evaluation/evaluation_notebook_doc.md).
-
-Current notebook parameters:
-
-| Parameter | Value |
-|-----------|-------|
-| Backends | `("chroma", "pgvector")` |
-| Batch size | 256 |
-| Query repeats | 3 |
-| k | 5 |
-| Max chunks | `None` |
-| Max queries | `None` |
-
-The notebook covers these comparison tables:
-
-| Metric | How it is measured |
-|--------|--------------------|
-| Ingestion throughput | Time to embed chunks plus store them, with `store.add()` time also separated |
-| Query latency | Time spent inside `store.query()` for each query/repeat |
-| Filter overhead | Same query timing with company, year, and sector filters when metadata exists |
-| Recall@5 | Top-k results scored against `evaluation/reference_answers.json` |
-| MRR | First relevant result rank from the top-k table |
-| Score/ranking parity | Top-k cosine scores and chunk ID order across backends |
-| Deployment complexity | Extra services, Docker Compose line count, and clean-machine setup steps |
-| Code legibility | Line count, import count, and radon complexity for each backend implementation |
-
-For the document-size comparison, use the page inventory and threshold helper:
-
-```python
-from benchmark_metrics import (
-    document_page_inventory,
-    run_page_group_ingestion_benchmark,
-    run_page_target_ingestion_benchmark,
-)
-
-page_inventory = document_page_inventory(page_threshold=60)
-threshold_results = run_page_group_ingestion_benchmark(page_threshold=60)
-target_results = run_page_target_ingestion_benchmark(page_targets=(20, 60))
-```
-
-The threshold helper compares PDFs below 60 pages with PDFs at or above 60
-pages. Report it as a short-vs-long cohort comparison, not as a substitute for a
-single-document 20-page vs 60-page timing unless you run those two documents
-separately. The target helper assigns each PDF to whichever target page count it
-is closest to, such as 20 pages or 60 pages, and then reports ingestion
-throughput for those groups.
-
-Run it after chunks already exist under `data/interim/chunks/`. If they do not,
-run `python pipeline.py extract` first.
+**Full backend benchmark** (timing, retrieval quality, deployment, code legibility):
 
 ```bash
 docker compose up -d
 alembic upgrade head
 python scripts/check_pgvector.py
-python benchmark_metrics.py
+HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 python benchmark_metrics.py
 ```
 
-Or open `notebooks/benchmark_exploration.ipynb` and run the cells. The notebook uses
-temporary benchmark collections and cleans them up after each run.
-`evaluation/evaluation_results.json` is intentionally empty by default; only write it after
-the notebook output looks right by running:
+**Notebook workflow** (pandas tables, optional JSON export):
+
+Open [notebooks/benchmark_exploration.ipynb](notebooks/benchmark_exploration.ipynb) from the repo root (or use the notebook's `REPO_ROOT` setup cell). The notebook uses temporary benchmark collections and cleans them up after each run. To export results after reviewing tables:
 
 ```python
 write_results_json(results)
 ```
 
-`benchmark_metrics.py` can also be run directly. It prints a compact console
-report and does not write JSON by default.
+To inspect chunks or extend labels, use [notebooks/reference_answer_builder.ipynb](notebooks/reference_answer_builder.ipynb) and follow [reference_answers_review.md](docs/evaluation/reference_answers_review.md).
 
-### Data directories
-
-`data/` is in `.gitignore`. The pipeline creates:
-
-- `data/interim/raw/` - pickle caches of extracted PDF elements
-- `data/interim/chunks/` - JSONL chunk files
-- `data/chromadb/` - ChromaDB persistent storage
-- Postgres data lives in the Docker volume `pgvector_data` when using pgvector
-
-All reproducible from source PDFs by re-running the pipeline.
+Timing is machine-dependent. Re-run the benchmark commands above to reproduce numbers on your hardware.
 
 ## Adding new documents
 
@@ -316,21 +171,11 @@ Create a subfolder in `PDF_SOURCE_DIR` named after the company, using underscore
 data/pdfs/
   Hershey_Company/
     report_2023.pdf
-  Nomad_Foods/
-    report_2023.pdf
   Your_New_Company/
     report_2024.pdf
 ```
 
 The pipeline discovers companies from folder names at runtime. Underscores are replaced by spaces in company labels. No code or `.env` change needed. Run `python pipeline.py extract` to process the new documents.
-
-## Adding a new vector store backend
-
-1. Create `vector_store/your_backend.py` implementing all methods from `VectorStore` in `types.py`
-2. Add a branch in `factory.py` for your backend name
-3. Run the existing test suite against your implementation
-
-The interface accepts numpy arrays for embeddings and returns `list[QueryResult]`. Scores should be cosine similarity (higher = more similar). If the underlying store returns distances, convert inside your implementation.
 
 ## Code style
 

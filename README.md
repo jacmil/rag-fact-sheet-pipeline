@@ -50,7 +50,7 @@ python -m pytest                  # vector-store contract (both backends)
 python pipeline.py --help         # CLI commands
 ```
 
-For backend benchmarks and notebooks, see [CONTRIBUTING.md](CONTRIBUTING.md#reference-set-and-benchmark-metrics).
+For backend benchmarks and notebooks, see [CONTRIBUTING.md](CONTRIBUTING.md#evaluation-and-benchmarks).
 
 ## Project layout
 
