@@ -1,150 +1,85 @@
-[Review Assignment Due Date](https://classroom.github.com/a/Ho0VU-Re)
+# RAG Pipeline for Carbon Performance Disclosures, with a ChromaDB vs pgvector Benchmark
 
-# JSON Derulo Comeback Tour
+Retrieval-augmented generation pipeline over TPI Centre Carbon Performance PDFs. Extracts and
+chunks corporate sustainability disclosures, embeds them, retrieves relevant passages, and
+generates cited answers. The same pipeline runs against either ChromaDB or pgvector behind one
+interface, which is what makes the benchmark possible.
 
-RAG pipeline for TPI Centre Carbon Performance PDFs. Extracts and chunks sustainability reports, embeds them, retrieves relevant passages, and generates cited answers — with the same pipeline runnable on **ChromaDB** or **pgvector**.
+**[Full report (PDF)](Report/DS205%20TPI%20Final%20Report.pdf)** |
+**[Benchmark results](docs/evaluation/benchmark_results.md)** |
+**[Design decisions](DECISIONS.md)**
 
-**Recommendation:** For TPI-style retrieval on a laptop, **ChromaDB is the default** (identical retrieval quality, lower query latency, simpler setup). See [docs/evaluation/benchmark_results.md](docs/evaluation/benchmark_results.md) for numbers and when pgvector is worth it.
+## What it does
 
-**Limitation:** Absolute retrieval precision is modest (**~0.18 @ k=5** on our reference set); improving it would require pipeline or model changes, not switching vector stores. Details in [benchmark_results.md § Retrieval accuracy limitations](docs/evaluation/benchmark_results.md#retrieval-accuracy-limitations).
+The pipeline is a five-stage CLI: extract, chunk, embed, retrieve, generate. The vector store sits
+behind a Protocol-typed interface with a factory that lazily imports whichever backend is
+configured, so switching stores is an environment variable rather than a code change.
 
-## Quick start
+Corpus as benchmarked: 15 companies, 17 PDFs, 5,913 chunks, 20 reference queries with hand-built
+expected-chunk sets.
+
+## Benchmark result
+
+Both backends were loaded with the identical corpus and compared across five dimensions.
+
+| Dimension | Winner | Evidence |
+|---|---|---|
+| Retrieval quality | Tie | Identical recall@5, precision@5, MRR, and identical top-5 ordering on 20/20 queries |
+| Query latency | ChromaDB | 3.93 ms vs 8.97 ms average median across filter modes |
+| Ingestion throughput | pgvector | 32.86 s vs 37.47 s full corpus; 179.9 vs 157.8 chunks/sec |
+| Deployment complexity | ChromaDB | 0 extra services vs 1; 2 setup steps vs 5 |
+| Code legibility | ChromaDB | 110 lines / 5 imports vs 174 lines / 11 imports |
+
+The conclusion is that backend choice is not an accuracy question in this pipeline, because
+accuracy tied exactly. ChromaDB is the recommended default for laptop-scale retrieval. pgvector is
+worth the setup cost when ingestion throughput matters or when the vectors need to live alongside
+relational data.
+
+**Honest limitation:** absolute retrieval precision is modest, around 0.18 at k=5 on the reference
+set. Improving that requires changes to chunking, the embedding model, or a reranking stage. It is
+not a vector store problem, and switching stores will not move it. Detail in
+[benchmark_results.md](docs/evaluation/benchmark_results.md#retrieval-accuracy-limitations).
+
+## Engineering notes
+
+Worth reading [DECISIONS.md](DECISIONS.md) if you care about the implementation. It records the
+reasoning behind the Protocol-over-ABC interface, the fixed `vector(384)` column, JSONB metadata
+with a GIN index, metadata filtering pushed into SQL WHERE clauses, bulk upsert instead of ORM
+session adds, and Alembic migrations for reproducible schema.
+
+Backend equivalence is enforced by a shared contract test suite (`tests/test_vector_store_contract.py`)
+that both stores must pass before merge. That suite is a trust check, not the performance
+evaluation; the benchmark is separate.
+
+## Running it
 
 ```bash
-git clone git@github.com:lse-ds205/group-project-json-derulo-comeback-tour.git
-cd group-project-json-derulo-comeback-tour
-
-conda env create -f environment.yml   # 25–30 min on first run
-conda activate project-d
-
-cp .env.example .env
-# Set PDF_SOURCE_DIR (see below)
+conda env create -f environment.yml
+conda activate <env>
+cp .env.example .env   # set PDF_SOURCE_DIR, CHROMA_DIR, and store selection
+python pipeline.py --help
 ```
 
-### 1. Add your PDFs
+For the pgvector path, `docker-compose up` brings up local Postgres and `alembic upgrade head`
+applies the schema.
 
-PDFs are not in Git. Obtain TPI assessment PDFs from the team SharePoint folder (see course brief), then place them like this:
-
-```
-data/pdfs/
-  AGL/
-    *.pdf
-```
-
-One subfolder per company; underscores in folder names become spaces in metadata. Set `PDF_SOURCE_DIR=data/pdfs` in `.env` (default in `.env.example`).
-
-The team benchmark used **17 PDFs** (5,913 chunks, 20 reference queries). 
-
-### 2. Run the pipeline
+Source PDFs are not included in the repository. They are public TPI Centre Carbon Performance
+disclosures; see [CONTRIBUTING.md](CONTRIBUTING.md) for document selection rationale.
 
 ```bash
-python pipeline.py run-all --query "What are the emissions targets for AGL?"
+python -m pytest              # backend contract suite
+python benchmark_metrics.py   # benchmark suite
 ```
 
-Stages can also be run separately: `extract`, `embed`, `retrieve`, `generate`. Output goes under `data/` (gitignored). Use **`VECTOR_STORE=chroma`** in `.env` for the simplest path; pgvector requires Docker — see [CONTRIBUTING.md](CONTRIBUTING.md#pgvector-backend-docker--postgres).
+## Contributors
 
-### 3. Optional checks
+Four-person project, LSE DS205, spring 2026.
 
-```bash
-python -m pytest                  # vector-store contract (both backends)
-python pipeline.py --help         # CLI commands
-```
+<!-- FILL THIS IN before treating the repo as resume-facing. Name each contributor and what
+     they owned. Commit counts were Jackson Miller 17, Josh de Buhr 14, 1chaos0 10,
+     Braydenc121 7, but commit count is not a description of ownership. -->
 
-For backend benchmarks and notebooks, see [CONTRIBUTING.md](CONTRIBUTING.md#evaluation-and-benchmarks).
-
-## Project layout
-
-```
-group-project-json-derulo-comeback-tour/
-│
-├── README.md                   # Quick start (this file)
-├── CONTRIBUTING.md             # Configuration, CLI, internals, pgvector setup
-├── DECISIONS.md                # Design rationale and tradeoffs
-├── .env.example                # Environment variable template
-├── environment.yml             # Conda environment
-├── requirements.txt            # Pip dependencies
-├── requirements-lock.txt       # Locked pip versions
-├── pytest.ini                  # pytest configuration
-├── docker-compose.yml          # Postgres + pgvector (when VECTOR_STORE=pgvector)
-├── alembic.ini                 # Database migration config
-│
-├── pipeline.py                 # Click CLI — run stages from here
-├── extract.py                  # PDF extraction and chunking
-├── embed.py                    # Embeddings → vector store
-├── retrieve.py                 # Bi-encoder + cross-encoder retrieval
-├── generate.py                 # Cited answer generation
-├── utils.py                    # Config and shared helpers
-├── benchmark_metrics.py        # Terminal backend benchmark
-│
-├── vector_store/               # Chroma + pgvector backends
-│   ├── __init__.py
-│   ├── types.py                # VectorStore protocol, QueryResult
-│   ├── factory.py              # Reads VECTOR_STORE from .env
-│   ├── chroma.py
-│   ├── pgvector.py
-│   └── db.py                   # SQLAlchemy schema (pgvector)
-│
-├── alembic/                    # pgvector schema migrations
-│   ├── env.py
-│   ├── script.py.mako
-│   └── versions/
-│       └── 001_create_chunk_records.py
-│
-├── evaluation/                 # Benchmark data (JSON)
-│   ├── __init__.py
-│   ├── paths.py                # Repo-root-relative path constants
-│   ├── reference_answers.json  # Manual Recall@5 reference set
-│   ├── document_metadata.json  # Company / year / sector overrides
-│   └── evaluation_results.json # Optional notebook export (empty by default)
-│
-├── notebooks/
-│   ├── benchmark_exploration.ipynb      # Pandas benchmark workflow
-│   └── reference_answer_builder.ipynb   # Inspect chunks, build labels
-│
-├── scripts/
-│   └── check_pgvector.py       # pgvector smoke test
-│
-├── tests/
-│   ├── conftest.py
-│   ├── helpers.py
-│   └── test_vector_store_contract.py
-│
-├── docs/                       # Documentation
-│   ├── README.md               # Documentation index
-│   ├── handoff/
-│   │   └── HANDOFF.md          # Team / AI handoff notes
-│   ├── agent/
-│   │   └── RULES.md            # AI agent rules & conventions
-│   ├── transcripts/
-│   │   └── Meeting Sylvan.docx # TPI scoping call notes
-│   └── evaluation/             # Benchmark write-ups (markdown)
-│       ├── README.md
-│       ├── benchmark_results.md
-│       ├── evaluation_notebook_doc.md
-│       └── reference_answers_review.md
-│
-├── Report/
-│   └── DS205 TPI Final Report.pdf
-│
-└── data/                       # Gitignored — created when you run the pipeline
-    ├── pdfs/                   # Your PDFs (one subfolder per company)
-    ├── interim/
-    │   ├── raw/                # Cached PDF extraction (pickle)
-    │   └── chunks/             # Chunked text (JSONL)
-    └── chromadb/               # ChromaDB storage (when using chroma)
-```
-
-**Note:** `evaluation/` at the repo root holds benchmark **data** (JSON + `paths.py`). `docs/evaluation/` holds benchmark **documentation** (markdown). They are different folders.
-
-## Further reading
-
-
-| Document                                                                                                     | Purpose                                                           |
-| ------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
-| [CONTRIBUTING.md](CONTRIBUTING.md)                                                                           | Configuration, CLI options, internals, pgvector setup, benchmarks |
-| [DECISIONS.md](DECISIONS.md)                                                                                 | Design rationale                                                  |
-| [docs/README.md](docs/README.md)                                                                             | Documentation index                                               |
-| [docs/evaluation/benchmark_results.md](docs/evaluation/benchmark_results.md)                                 | Benchmark tables and recommendation                               |
-| [Report/DS205 TPI Final Report.pdf](Report/DS205%20TPI%20Final%20Report.pdf) | Final submission report                                           |
-
-
+- Jackson Miller: TODO
+- Josh de Buhr: TODO
+- 1chaos0: TODO
+- Braydenc121: TODO
